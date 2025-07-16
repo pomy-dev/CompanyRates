@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiArrowLeft, FiSend, FiCheck } from "react-icons/fi";
-import Image from "next/image";
-import commentpic from "../../assets/images/suggest.png";
+
 //local modules
 import { useDataContext } from "../data-context";
 import {
@@ -17,16 +16,15 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Textarea } from "../components/ui/textarea";
 import { Dialog, DialogContent,DialogTitle } from "../components/ui/dialog";
-import { Badge } from "../components/ui/badge";
-import { Separator } from "../components/ui/separator";
-import { MessageSquare, Star, ThumbsUp, Lightbulb, AlertCircle } from "lucide-react";
-import Loading from "../components/ui/loading";
+
+import { MessageSquare,  AlertCircle } from "lucide-react";
+
 import { useNotification } from "../components/ui/notification";
 
 const Feedback = () => {
   // const [feedback, setFeedback] = useState("");
   const [showPopup, setShowPopup] = useState(false);
-  const router = useRouter();
+  const router = useRouter();''
   const company_id = localStorage.getItem('company_id')
 
   const { data, setData } = useDataContext();
@@ -192,7 +190,7 @@ const Feedback = () => {
                 name="suggestionBox"
                 onChange={handleChange}
                 rows={6}
-                placeholder="Tell us about your experience... What did you like? What could we improve? Any suggestions?"
+                placeholder="What could we improve? Any suggestions?"
                 className="w-full text-base resize-none border-2 border-slate-200 focus:border-blue-500 rounded-lg p-4 transition-all duration-300"
                 style={{
                   fontSize: "16px",
@@ -223,7 +221,7 @@ const Feedback = () => {
                 size="lg"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
               >
-                <FiSend className="w-4 h-4" />
+            
                 Submit Suggestion
               </Button>
             </div>

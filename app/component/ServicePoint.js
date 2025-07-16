@@ -4,35 +4,21 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  ShoppingBag,
-  ArrowBigLeft,
   CheckCircle,
   ArrowRight,
-  Star,
-  Plus,
   X,
   Building2,
-  Users,
-  Headphones,
-  CreditCard,
-  Settings
+  Users
+
 } from "lucide-react";
-import { FiCheckCircle, FiArrowLeft, FiArrowRight } from "react-icons/fi";
+
 import { FaStar } from "react-icons/fa";
-import Image from "next/image";
-import logo from "../../assets/images/company.jpg";
 
 //local modules
 import { useDataContext } from "../data-context";
 import { iconMap } from "../../utils/iconSelector";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Textarea } from "../components/ui/textarea";
-import { Badge } from "../components/ui/badge";
-import { Separator } from "../components/ui/separator";
+import { Card, CardContent } from "../components/ui/card";
 
 function ServiceScreen() {
   const router = useRouter();

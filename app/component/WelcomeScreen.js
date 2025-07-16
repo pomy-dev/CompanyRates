@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Star, ArrowRight, Menu, Building2, Heart, Users, TrendingUp, MessageSquare } from "lucide-react";
+import { Star, ArrowRight, Menu, Building2, Heart, Users, TrendingUp, MessageSquare,LockKeyhole } from "lucide-react";
 import logo from "../../assets/images/company.jpg";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
@@ -205,10 +205,10 @@ function WelcomeScreen() {
             <Card className="border-0 shadow-md bg-white/50 backdrop-blur-sm hover:shadow-lg transition-shadow">
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-6 h-6 text-green-600" />
+                  <LockKeyhole className="w-6 h-6 text-green-600" />
                 </div>
-                <h3 className="font-semibold text-slate-800 mb-2">Anonymous</h3>
-                <p className="text-slate-600 text-sm">Your privacy is protected</p>
+                <h3 className="font-semibold text-slate-800 mb-2">secured</h3>
+                <p className="text-slate-600 text-sm">We prioritize your privacy</p>
               </CardContent>
             </Card>
           </div>

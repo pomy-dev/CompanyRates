@@ -64,12 +64,10 @@ const { phoneNumber, username, email } = data;
                 <User className="w-8 h-8 text-white" />
               </div>
             </div>
-            <CardTitle className="text-3xl font-bold text-slate-800 mb-2">
+            <CardTitle className="text-3xl font-bold text-slate-800">
               Tell us about yourself
             </CardTitle>
-            <p className="text-slate-600 text-lg">
-              We need a few details to personalize your experience
-            </p>
+           
           </CardHeader>
           
           <CardContent className="space-y-6">
