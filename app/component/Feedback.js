@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiArrowLeft, FiSend, FiCheck } from "react-icons/fi";
+import { FiArrowLeft, FiCheck } from "react-icons/fi";
 
 //local modules
 import { useDataContext } from "../data-context";
 import {
+  insertUser,
   insertRating,
   insertFeedback,
   insertOther,
@@ -15,21 +16,21 @@ import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Textarea } from "../components/ui/textarea";
-import { Dialog, DialogContent,DialogTitle } from "../components/ui/dialog";
-
-import { MessageSquare,  AlertCircle } from "lucide-react";
-
+import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog";
+import { MessageSquare } from "lucide-react";
 import { useNotification } from "../components/ui/notification";
 
 const Feedback = () => {
   // const [feedback, setFeedback] = useState("");
   const [showPopup, setShowPopup] = useState(false);
-  const router = useRouter();''
+  const router = useRouter(); ''
   const company_id = localStorage.getItem('company_id')
 
   const { data, setData } = useDataContext();
   const { suggestionBox, criteria } = data;
   const { notification } = useNotification();
+
+  const [userData, setUserData] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -64,19 +65,37 @@ const Feedback = () => {
     return true; // No keys found
   };
 
-  const sendRating = async () => {
+  const sendUser = async () => {
+    const userInfo = {
+      name: data?.username,
+      phone: data?.phoneNumber,
+      email: data?.email
+    }
+
+    try {
+      const data = await insertUser(userInfo);
+
+      if (!data) return 'User is null after supposed insertion';
+
+      return data;
+
+    } catch (error) {
+      console.error("Failed to insert user:", error);
+      return error
+    }
+  }
+
+  const sendNormalRating = async (userId) => {
     const newRating = {
       companyId: company_id,
       rating: data.ratings, // Example JSON rating
-      username: data.username,
-      phoneNumber: data.phoneNumber,
-      email: data.email,
+      user_id: userId,
       sms: true,
       servicePoint: data.servicePoint?.name, // Optional chaining to prevent errors
     };
 
     try {
-      const result = await insertRating(newRating);
+      const result = await insertRating(userData?.id, newRating);
 
       if (result) {
         // Check if data.comments or suggestionBox exists
@@ -103,66 +122,147 @@ const Feedback = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    // Ensure data is available before proceeding
-    console.log(`Company Id Verify: ${company_id}`)
+  const submitData = async () => {
+    try {
+      if (data?.username || data?.phoneNumber) {
+        const user = await sendUser();
+        setUserData(user)
+        userData && console.log(`User Id from DB: ${userData?.id}`)
+      }
+    } catch (error) {
+      console.error("Failed to insert user:", error);
+      notification.error("Failed to insert user");
+    }
 
     try {
-      if (isEmptyObject(data.otherCriteria)) {
+      if (userData) {
         setShowPopup(true);
-        await sendRating();
-        notification.ratingSubmitted();
-        cleaner();
-      } else {
-        setShowPopup(true);
-        const newEntries = [
-          {
-            criteria: data.otherCriteria?.otherValue,
-            ratings: data.otherCriteria?.otherRating,
-            comments: data.otherCriteria?.otherReason,
-            company_id: company_id,
-            department: data.otherCriteria?.otherDepartment,
-            username: data.username,
-            phone_number: data.phoneNumber,
-          },
-        ];
 
-        try {
-          if (data.suggestionBox && data.suggestionBox.trim() !== "") {
+        if (!isEmptyObject(data.ratings)) {
+          try {
+            const ratingData = await sendNormalRating(userData?.id);
+            ratingData && console.log(`Rating data: ${ratingData}`)
+            notification.ratingSubmitted();
+          } catch (error) {
+            console.error("Failed to insert ratings:", error);
+            notification.error("Failed to submit ratings");
+          }
+        }
+
+        if (data.suggestionBox && data.suggestionBox?.trim() !== "") {
+          try {
             const newFeedback = {
               comments: null,
               suggestions: data.suggestionBox ? data.suggestionBox : null,
               ratingId: null,
               company_id: company_id,
             };
-
-            try {
-              const result2 = await insertFeedback(newFeedback);
-            } catch (error) {
-              console.error("Failed to insert feedback:", error);
-              notification.error("Failed to submit feedback");
-            }
+            const feedbackData = await insertFeedback(userData?.id, newFeedback);
+            feedbackData && console.log(`Suggestion data: ${feedbackData}`)
+          } catch (error) {
+            console.error("Failed to insert suggestions:", error);
+            notification.error("Failed to submit suggestions");
           }
-          const result = await insertOther(newEntries);
-
-          if (result && !isEmptyObject(data.ratings)) {
-            await sendRating();
-            notification.ratingSubmitted();
-            cleaner();
-          } else {
-            notification.ratingSubmitted();
-            cleaner();
-          }
-        } catch (error) {
-          console.error("Failed to insert entries:", error);
-          notification.error("Failed to submit your feedback. Please try again.");
         }
+
+        if (!isEmptyObject(data.otherCriteria)) {
+          try {
+            const otherCriterion = [
+              {
+                criteria: data.otherCriteria?.otherValue,
+                ratings: data.otherCriteria?.otherRating,
+                comments: data.otherCriteria?.otherReason,
+                company_id: company_id,
+                department: data.otherCriteria?.otherDepartment
+              },
+            ];
+            const otherData = await insertOther(userData?.id, otherCriterion);
+            otherData && console.log(`Other Criterion data: ${otherData}`)
+          } catch (error) {
+            console.error("Failed to insert otherCriterion Data:", error);
+            notification.error("Failed to submit other-criterion rating");
+          }
+        }
+
+        cleaner();
+        setUserData(null)
+        setTimeout(() => { setShowPopup(false) }, 2000);
       }
     } catch (error) {
       console.error("Error submitting feedback:", error);
       notification.error("Something went wrong. Please try again.");
     }
-  };
+  }
+
+  // const handleSubmit = async () => {
+  //   // Ensure data is available before proceeding
+  //   console.log(`Company Id Verify: ${company_id}`)
+
+  //   try {
+  //     if (data?.username || data?.phoneNumber) {
+  //       const userData = await sendUser();
+
+  //       userData && console.log(`User Id from DB: ${userData?.id}`)
+
+  //       if (isEmptyObject(data.otherCriteria)) {
+  //         setShowPopup(true);
+  //         await sendNormalRating(userData?.id);
+  //         notification.ratingSubmitted();
+  //         cleaner();
+  //         setTimeout(() => { setShowPopup(false) }, 2000);
+  //       } else {
+  //         setShowPopup(true);
+  //         const otherCriterion = [
+  //           {
+  //             criteria: data.otherCriteria?.otherValue,
+  //             ratings: data.otherCriteria?.otherRating,
+  //             comments: data.otherCriteria?.otherReason,
+  //             company_id: company_id,
+  //             department: data.otherCriteria?.otherDepartment
+  //           },
+  //         ];
+
+  //         try {
+  //           if (data.suggestionBox && data.suggestionBox?.trim() !== "") {
+  //             const newFeedback = {
+  //               comments: null,
+  //               suggestions: data.suggestionBox ? data.suggestionBox : null,
+  //               ratingId: null,
+  //               company_id: company_id,
+  //             };
+
+  //             try {
+  //               const feedbackData = await insertFeedback(userData?.id, newFeedback);
+  //               feedbackData && console.log(`Suggestion data: ${feedbackData}`)
+  //             } catch (error) {
+  //               console.error("Failed to insert feedback:", error);
+  //               notification.error("Failed to submit feedback");
+  //             }
+  //           }
+
+  //           const result = await insertOther(otherCriterion);
+
+  //           if (result && !isEmptyObject(data.ratings)) {
+  //             await sendNormalRating(userData?.id);
+  //             notification.ratingSubmitted();
+  //             cleaner();
+  //           } else {
+  //             notification.ratingSubmitted();
+  //             cleaner();
+  //           }
+  //         } catch (error) {
+  //           console.error("Failed to insert entries:", error);
+  //           notification.error("Failed to submit your feedback. Please try again.");
+  //         }
+  //         setTimeout(() => { setShowPopup(false) }, 2000);
+  //       }
+  //     }
+
+  //   } catch (error) {
+  //     console.error("Error submitting feedback:", error);
+  //     notification.error("Something went wrong. Please try again.");
+  //   }
+  // };
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -180,7 +280,7 @@ const Feedback = () => {
             Your thoughts help us improve our service
           </p>
         </CardHeader>
-        
+
         <CardContent className="px-8 pb-8">
           <div className="space-y-6">
             {/* Simple Feedback Form */}
@@ -217,11 +317,10 @@ const Feedback = () => {
               </Button>
 
               <Button
-                onClick={handleSubmit}
+                onClick={submitData}
                 size="lg"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
               >
-            
                 Submit Suggestion
               </Button>
             </div>

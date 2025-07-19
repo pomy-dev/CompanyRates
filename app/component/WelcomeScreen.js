@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Star, ArrowRight, Menu, Building2, Heart, Users, TrendingUp, MessageSquare,LockKeyhole } from "lucide-react";
+import { Star, ArrowRight, Menu, Building2, Heart, Users, TrendingUp, MessageSquare, LockKeyhole } from "lucide-react";
 import logo from "../../assets/images/company.jpg";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
@@ -24,7 +24,7 @@ function WelcomeScreen() {
   const fetchAndCacheDepartments = async () => {
     const company_id = localStorage.getItem("company_id");
     console.log(`id from Welcome Screen ${company_id}`);
-    const departments = await fetchCompanyDepartments(company_id?.trim());
+    const departments = await fetchCompanyDepartments(company_id);
 
     const enriched = departments.map((item) => ({
       name: item.servicepoint,
@@ -144,18 +144,18 @@ function WelcomeScreen() {
                 <Star className="w-12 h-12 text-white fill-white" />
               </div>
             </div>
-            
+
             <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-                We Value Your
+              We Value Your
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                 {" "}Feedback!
               </span>
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-slate-600 mb-8 max-w-2xl mx-auto">
-           "Rate our service and share your suggestions!"
+              "Rate our service and share your suggestions!"
             </p>
-            
+
             <div className="flex gap-4 flex-wrap justify-center">
               <Button
                 onClick={handleStart}
@@ -166,7 +166,7 @@ function WelcomeScreen() {
                 Start Rating
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
-              
+
               <Button
                 onClick={handleDirectFeedback}
                 size="lg"
