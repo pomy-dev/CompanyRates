@@ -23,14 +23,12 @@ import { useNotification } from "../components/ui/notification";
 const Feedback = () => {
   // const [feedback, setFeedback] = useState("");
   const [showPopup, setShowPopup] = useState(false);
-  const router = useRouter(); ''
+  const router = useRouter();
   const company_id = localStorage.getItem('company_id')
 
   const { data, setData } = useDataContext();
   const { suggestionBox, criteria } = data;
   const { notification } = useNotification();
-
-  const [userData, setUserData] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,16 +70,21 @@ const Feedback = () => {
       email: data?.email
     }
 
-    try {
-      const data = await insertUser(userInfo);
+    if (data?.username || data?.phoneNumber) {
+      try {
+        const data = await insertUser(userInfo);
 
-      if (!data) return 'User is null after supposed insertion';
+        if (!data) return;
 
-      return data;
+        return data;
 
-    } catch (error) {
-      console.error("Failed to insert user:", error);
-      return error
+      } catch (error) {
+        console.error("Failed to insert user:", error);
+        notification.error("Error inserting user details");
+        return error
+      }
+    } else {
+      notification.error("User details not mentioned");
     }
   }
 
@@ -95,7 +98,7 @@ const Feedback = () => {
     };
 
     try {
-      const result = await insertRating(userData?.id, newRating);
+      const result = await insertRating(newRating);
 
       if (result) {
         // Check if data.comments or suggestionBox exists
@@ -104,6 +107,7 @@ const Feedback = () => {
           (data.suggestionBox && data.suggestionBox.trim() !== "")
         ) {
           const newFeedback = {
+            user_id: userId,
             comments: !isEmptyObject(data.comments) ? data.comments : null,
             suggestions: data.suggestionBox ? data.suggestionBox : null,
             ratingId: result[0].id,
@@ -112,6 +116,7 @@ const Feedback = () => {
 
           try {
             const result2 = await insertFeedback(newFeedback);
+            result2 && console.log(`FeedBackData: ${result2}`);
           } catch (error) {
             console.error("Failed to insert feedback:", error);
           }
@@ -124,23 +129,15 @@ const Feedback = () => {
 
   const submitData = async () => {
     try {
-      if (data?.username || data?.phoneNumber) {
-        const user = await sendUser();
-        setUserData(user)
-        userData && console.log(`User Id from DB: ${userData?.id}`)
-      }
-    } catch (error) {
-      console.error("Failed to insert user:", error);
-      notification.error("Failed to insert user");
-    }
+      setShowPopup(true);
+      const user = await sendUser();
+      user && console.log(`User Id from DB: ${user?.id}`)
 
-    try {
-      if (userData) {
-        setShowPopup(true);
+      if (user) {
 
         if (!isEmptyObject(data.ratings)) {
           try {
-            const ratingData = await sendNormalRating(userData?.id);
+            const ratingData = await sendNormalRating(user?.id);
             ratingData && console.log(`Rating data: ${ratingData}`)
             notification.ratingSubmitted();
           } catch (error) {
@@ -149,34 +146,17 @@ const Feedback = () => {
           }
         }
 
-        if (data.suggestionBox && data.suggestionBox?.trim() !== "") {
-          try {
-            const newFeedback = {
-              comments: null,
-              suggestions: data.suggestionBox ? data.suggestionBox : null,
-              ratingId: null,
-              company_id: company_id,
-            };
-            const feedbackData = await insertFeedback(userData?.id, newFeedback);
-            feedbackData && console.log(`Suggestion data: ${feedbackData}`)
-          } catch (error) {
-            console.error("Failed to insert suggestions:", error);
-            notification.error("Failed to submit suggestions");
-          }
-        }
-
         if (!isEmptyObject(data.otherCriteria)) {
           try {
-            const otherCriterion = [
-              {
-                criteria: data.otherCriteria?.otherValue,
-                ratings: data.otherCriteria?.otherRating,
-                comments: data.otherCriteria?.otherReason,
-                company_id: company_id,
-                department: data.otherCriteria?.otherDepartment
-              },
-            ];
-            const otherData = await insertOther(userData?.id, otherCriterion);
+            const otherCriterion = {
+              user_id: user?.id,
+              criteria: data.otherCriteria?.otherValue,
+              ratings: data.otherCriteria?.otherRating,
+              comments: data.otherCriteria?.otherReason,
+              company_id: company_id,
+              department: data.otherCriteria?.otherDepartment
+            };
+            const otherData = await insertOther(otherCriterion);
             otherData && console.log(`Other Criterion data: ${otherData}`)
           } catch (error) {
             console.error("Failed to insert otherCriterion Data:", error);
@@ -185,84 +165,17 @@ const Feedback = () => {
         }
 
         cleaner();
-        setUserData(null)
-        setTimeout(() => { setShowPopup(false) }, 2000);
+      } else {
+        console.log('User details could not be determined');
       }
+
     } catch (error) {
-      console.error("Error submitting feedback:", error);
+      console.error("Error inserting user:", error);
       notification.error("Something went wrong. Please try again.");
+    } finally {
+      setTimeout(() => { setShowPopup(false) }, 2000);
     }
   }
-
-  // const handleSubmit = async () => {
-  //   // Ensure data is available before proceeding
-  //   console.log(`Company Id Verify: ${company_id}`)
-
-  //   try {
-  //     if (data?.username || data?.phoneNumber) {
-  //       const userData = await sendUser();
-
-  //       userData && console.log(`User Id from DB: ${userData?.id}`)
-
-  //       if (isEmptyObject(data.otherCriteria)) {
-  //         setShowPopup(true);
-  //         await sendNormalRating(userData?.id);
-  //         notification.ratingSubmitted();
-  //         cleaner();
-  //         setTimeout(() => { setShowPopup(false) }, 2000);
-  //       } else {
-  //         setShowPopup(true);
-  //         const otherCriterion = [
-  //           {
-  //             criteria: data.otherCriteria?.otherValue,
-  //             ratings: data.otherCriteria?.otherRating,
-  //             comments: data.otherCriteria?.otherReason,
-  //             company_id: company_id,
-  //             department: data.otherCriteria?.otherDepartment
-  //           },
-  //         ];
-
-  //         try {
-  //           if (data.suggestionBox && data.suggestionBox?.trim() !== "") {
-  //             const newFeedback = {
-  //               comments: null,
-  //               suggestions: data.suggestionBox ? data.suggestionBox : null,
-  //               ratingId: null,
-  //               company_id: company_id,
-  //             };
-
-  //             try {
-  //               const feedbackData = await insertFeedback(userData?.id, newFeedback);
-  //               feedbackData && console.log(`Suggestion data: ${feedbackData}`)
-  //             } catch (error) {
-  //               console.error("Failed to insert feedback:", error);
-  //               notification.error("Failed to submit feedback");
-  //             }
-  //           }
-
-  //           const result = await insertOther(otherCriterion);
-
-  //           if (result && !isEmptyObject(data.ratings)) {
-  //             await sendNormalRating(userData?.id);
-  //             notification.ratingSubmitted();
-  //             cleaner();
-  //           } else {
-  //             notification.ratingSubmitted();
-  //             cleaner();
-  //           }
-  //         } catch (error) {
-  //           console.error("Failed to insert entries:", error);
-  //           notification.error("Failed to submit your feedback. Please try again.");
-  //         }
-  //         setTimeout(() => { setShowPopup(false) }, 2000);
-  //       }
-  //     }
-
-  //   } catch (error) {
-  //     console.error("Error submitting feedback:", error);
-  //     notification.error("Something went wrong. Please try again.");
-  //   }
-  // };
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
