@@ -1,19 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { Star, ArrowRight, Menu, Building2, Heart, Users, TrendingUp, MessageSquare, LockKeyhole } from "lucide-react";
-import logo from "../../assets/images/company.jpg";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import LoginForm from "./admin/LoginForm";
-import RegistrationForm from "./admin/RegisterForm";
-import Dashboard from "./admin/Dashboard";
 import { fetchCompanyDepartments } from "../../services/companyService";
 import { getIconForDepartment } from "../../utils/iconSelector";
-import { supabase } from "../../services/supabaseService";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
-import { Badge } from "../components/ui/badge";
 
 function WelcomeScreen() {
   const router = useRouter();

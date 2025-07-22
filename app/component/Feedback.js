@@ -63,11 +63,13 @@ const Feedback = () => {
     return true; // No keys found
   };
 
-  const sendUser = async () => {
+  const sendUser = async (user_path) => {
     const userInfo = {
       name: data?.username,
       phone: data?.phoneNumber,
-      email: data?.email
+      email: data?.email,
+      user_path: user_path || 'rating_only',
+      company_id: user?.id
     }
 
     if (data?.username || data?.phoneNumber) {
@@ -130,7 +132,7 @@ const Feedback = () => {
   const submitData = async () => {
     try {
       setShowPopup(true);
-      const user = await sendUser();
+      const user = (!isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)) ? await sendUser('both') : (!isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)) ? await sendUser('suggestion_only') : await sendUser('rating_only');
       user && console.log(`User Id from DB: ${user?.id}`)
 
       if (user) {

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../services/supabaseService';
+import { getAllUsersByCompanyId } from '../../../services/ratingService';
 import {
   Building2,
   LogOut,
@@ -22,7 +23,6 @@ import { useAuth } from '../../../app-context/auth-context';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 
-// Register Chart.js components
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 function Dashboard() {
@@ -35,12 +35,12 @@ function Dashboard() {
   const [otherData, setOtherData] = useState([]);
   const [totalRatings, setTotalRatings] = useState(0);
   const [averageRating, setAverageRating] = useState(0);
+  const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
-  const {user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [recentComments, setRecentComments] = useState([]);
   const [distribution, setDistribution] = useState({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
-
 
   // Fetch company and service points data from Supabase
   useEffect(() => {
@@ -215,6 +215,15 @@ function Dashboard() {
       setOtherData(filteredData);
     }
 
+    // Fetch all users/raters
+    async function fetchUsers() {
+      const raters = await getAllUsersByCompanyId(user?.id);
+      if (!raters) return;
+
+      setUsers(raters);
+    }
+
+    fetchUsers();
     fetchOtherData();
     fetchComments();
     fetchRatings();
@@ -322,21 +331,20 @@ function Dashboard() {
       </div>
     );
   }
+  const totalUsers = users?.length || 0;
 
-  // if (error || !companyData) {
-  //   return (
-  //     <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-  //       <div className="text-red-600">Error: {error || 'No company data found'}</div>
-  //     </div>
-  //   );
-  // }
+  const ratingsOnlyCount = users.filter(u => u.user_path === 'rating_only').length;
+  const suggestionsOnlyCount = users.filter(u => u.user_path === 'suggestion_only').length;
+  const bothCount = users.filter(u => u.user_path === 'both').length;
 
+  const ratingO = totalUsers ? Math.round((ratingsOnlyCount / totalUsers) * 100) : 0;
+  const suggO = totalUsers ? Math.round((suggestionsOnlyCount / totalUsers) * 100) : 0;
+  const both = totalUsers ? Math.round((bothCount / totalUsers) * 100) : 0;
 
-  // Mock data for pie chart
   const pieChartData = {
-    labels: ['Ratings Only', 'Suggestion Only', 'Both Rating & Suggestion'],
+    labels: ['Rated Only', 'Suggested Only', 'Both Rated & Suggested'],
     datasets: [{
-      data: [50, 30, 20], // Mock data: 50% ratings only, 30% suggestion only, 20% both
+      data: [ratingO, suggO, both],
       backgroundColor: ['#3B82F6', '#10B981', '#F59E0B'],
       hoverBackgroundColor: ['#2563EB', '#059669', '#D97706'],
     }],
@@ -347,7 +355,6 @@ function Dashboard() {
     const service = point?.name;
     return service;
   }) || []
-
 
   // Mock data for ratings bar chart
   const ratingsBarData = {
