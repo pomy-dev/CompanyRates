@@ -1,180 +1,31 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiArrowLeft, FiCheck } from "react-icons/fi";
-
+import { FiArrowLeft } from "react-icons/fi";
 //local modules
 import { useDataContext } from "../data-context";
-import {
-  insertUser,
-  insertRating,
-  insertFeedback,
-  insertOther,
-} from "../../services/ratingService";
-
-import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Textarea } from "../components/ui/textarea";
-import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog";
 import { MessageSquare } from "lucide-react";
-import { useNotification } from "../components/ui/notification";
 
 const Feedback = () => {
-  // const [feedback, setFeedback] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const router = useRouter();
   const company_id = localStorage.getItem('company_id')
 
   const { data, setData } = useDataContext();
   const { suggestionBox, criteria } = data;
-  const { notification } = useNotification();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const cleaner = () => {
-    localStorage.removeItem('ratingData');
 
-    setTimeout(() => {
-      setData({
-        username: "",
-        phoneNumber: "",
-        servicePoint: "",
-        criteria: [],
-        ratings: {},
-        email: "",
-        comments: {},
-        suggestionBox: "",
-      });
-      router.push("/");
-    }, 5000);
-  };
-
-  //check object if emty :
-  const isEmptyObject = (obj) => {
-    for (let key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        return false; // Object has at least one key
-      }
-    }
-    return true; // No keys found
-  };
-
-  const sendUser = async () => {
-    const userInfo = {
-      name: data?.username,
-      phone: data?.phoneNumber,
-      email: data?.email
-    }
-
-    if (data?.username || data?.phoneNumber) {
-      try {
-        const data = await insertUser(userInfo);
-
-        if (!data) return;
-
-        return data;
-
-      } catch (error) {
-        console.error("Failed to insert user:", error);
-        notification.error("Error inserting user details");
-        return error
-      }
-    } else {
-      notification.error("User details not mentioned");
-    }
-  }
-
-  const sendNormalRating = async (userId) => {
-    const newRating = {
-      companyId: company_id,
-      rating: data.ratings, // Example JSON rating
-      user_id: userId,
-      sms: true,
-      servicePoint: data.servicePoint?.name, // Optional chaining to prevent errors
-    };
-
-    try {
-      const result = await insertRating(newRating);
-
-      if (result) {
-        // Check if data.comments or suggestionBox exists
-        if (
-          !isEmptyObject(data.comments) ||
-          (data.suggestionBox && data.suggestionBox.trim() !== "")
-        ) {
-          const newFeedback = {
-            user_id: userId,
-            comments: !isEmptyObject(data.comments) ? data.comments : null,
-            suggestions: data.suggestionBox ? data.suggestionBox : null,
-            ratingId: result[0].id,
-            company_id: company_id,
-          };
-
-          try {
-            const result2 = await insertFeedback(newFeedback);
-            result2 && console.log(`FeedBackData: ${result2}`);
-          } catch (error) {
-            console.error("Failed to insert feedback:", error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Failed to insert rating:", error);
-    }
-  };
 
   const submitData = async () => {
-    try {
-      setShowPopup(true);
-      const user = await sendUser();
-      user && console.log(`User Id from DB: ${user?.id}`)
-
-      if (user) {
-
-        if (!isEmptyObject(data.ratings)) {
-          try {
-            const ratingData = await sendNormalRating(user?.id);
-            ratingData && console.log(`Rating data: ${ratingData}`)
-            notification.ratingSubmitted();
-          } catch (error) {
-            console.error("Failed to insert ratings:", error);
-            notification.error("Failed to submit ratings");
-          }
-        }
-
-        if (!isEmptyObject(data.otherCriteria)) {
-          try {
-            const otherCriterion = {
-              user_id: user?.id,
-              criteria: data.otherCriteria?.otherValue,
-              ratings: data.otherCriteria?.otherRating,
-              comments: data.otherCriteria?.otherReason,
-              company_id: company_id,
-              department: data.otherCriteria?.otherDepartment
-            };
-            const otherData = await insertOther(otherCriterion);
-            otherData && console.log(`Other Criterion data: ${otherData}`)
-          } catch (error) {
-            console.error("Failed to insert otherCriterion Data:", error);
-            notification.error("Failed to submit other-criterion rating");
-          }
-        }
-
-        cleaner();
-      } else {
-        console.log('User details could not be determined');
-      }
-
-    } catch (error) {
-      console.error("Error inserting user:", error);
-      notification.error("Something went wrong. Please try again.");
-    } finally {
-      setTimeout(() => { setShowPopup(false) }, 2000);
-    }
+    router.push("/user-details");
   }
 
   return (
@@ -234,41 +85,13 @@ const Feedback = () => {
                 size="lg"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
               >
-                Submit Suggestion
+                Next
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Custom Success Popup */}
-      <Dialog open={showPopup}>
-        <DialogContent className="max-w-md text-center">
-          <div className="p-8">
-            {/* Success Icon */}
-            <Avatar className="w-20 h-20 mx-auto mb-6">
-              <AvatarFallback className="bg-green-500 text-white">
-                <FiCheck className="w-10 h-10" />
-              </AvatarFallback>
-            </Avatar>
-            <DialogTitle></DialogTitle>
-
-            {/* Success Message */}
-            <h3 className="text-3xl font-bold text-slate-800 mb-4">
-              Thank You!
-            </h3>
-            <p className="text-xl text-slate-600 mb-6">
-              Your feedback has been submitted successfully.
-            </p>
-
-            {/* Loading indicator */}
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700"></div>
-            </div>
-            <p className="text-slate-500 mt-4">Redirecting...</p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
