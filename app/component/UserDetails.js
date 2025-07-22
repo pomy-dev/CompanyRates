@@ -8,12 +8,30 @@ import ratelater from "../../assets/images/ratelater.png";
 import { useDataContext } from "../data-context";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Label } from "../components/ui/label";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { useNotification } from "../components/ui/notification";
+import { FiCheck } from "react-icons/fi";
+//local moduules
+import {
+  insertUser,
+  insertRating,
+  insertFeedback,
+  insertOther,
+} from "../../services/ratingService";
 
 function UserDetailsScreen() {
   const router = useRouter();
@@ -22,8 +40,9 @@ function UserDetailsScreen() {
 
   //global  data context :
   const { data, setData } = useDataContext();
-const { phoneNumber, username, email } = data;
+  const { phoneNumber, username, email } = data;
   const { notification } = useNotification();
+  const company_id = localStorage.getItem("company_id");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,20 +58,185 @@ const { phoneNumber, username, email } = data;
     setShowDialog(true);
   };
 
-  const handleRateNow = () => {
-    notification.userSaved(username);
-    router.push("/service-point");
-  };
-
-  const handleRateLater = () => {
-    notification.smsSent(phoneNumber);
-    router.push("/");
-  };
-
   const handleModalCancel = () => {
     setShowDialog(false);
-  }
+  };
 
+  const cleaner = () => {
+    localStorage.removeItem("ratingData");
+
+    setTimeout(() => {
+      setData({
+        username: "",
+        phoneNumber: "",
+        servicePoint: "",
+        criteria: [],
+        ratings: {},
+        email: "",
+        comments: {},
+        suggestionBox: "",
+      });
+      router.push("/");
+    }, 5000);
+  };
+
+  //check object if emty :
+  const isEmptyObject = (obj) => {
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        return false; 
+      }
+    }
+    return true; 
+  };
+
+  const sendUser = async () => {
+    const userInfo = {
+      name: data?.username,
+      phone: data?.phoneNumber,
+      email: data?.email,
+    };
+
+    if (data?.username || data?.phoneNumber) {
+      if (data?.sms) {
+        const data1 = await insertUser({
+          name: data?.username,
+          phone: data?.phoneNumber,
+          email: data?.email,
+          sms: "waiting",
+        });
+
+        if (!data1) return;
+
+        return "sms";
+      }
+
+      try {
+        const data = await insertUser(userInfo);
+
+        if (!data) return;
+
+        return data;
+      } catch (error) {
+        console.error("Failed to insert user:", error);
+        notification.error("Error inserting user details");
+        return error;
+      }
+    } else {
+      notification.error("User details not mentioned");
+    }
+  };
+
+  const sendNormalRating = async (userId) => {
+    const newRating = {
+      companyId: company_id,
+      rating: data.ratings,
+      user_id: userId,
+      sms: true,
+      servicePoint: data.servicePoint?.name, 
+    };
+
+    try {
+      const result = await insertRating(newRating);
+
+      if (result) {
+        // Check if data.comments or suggestionBox exists
+        if (
+          !isEmptyObject(data.comments) ||
+          (data.suggestionBox && data.suggestionBox.trim() !== "")
+        ) {
+          try {
+            sendFeedBack(userId, result[0].id);
+          } catch (error) {
+            console.error("Failed to insert feedback:", error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to insert rating:", error);
+    }
+  };
+
+  const sendFeedBack = async (userId, rateID) => {
+    const newFeedback = {
+      user_id: userId,
+      comments: !isEmptyObject(data.comments) ? data.comments : null,
+      suggestions: data.suggestionBox ? data.suggestionBox : null,
+      ratingId: rateID ? rateID : null,
+      company_id: company_id,
+    };
+
+    try {
+      const result2 = await insertFeedback(newFeedback);
+      result2 && console.log(`FeedBackData: ${result2}`);
+    } catch (error) {
+      console.error("Failed to insert feedback:", error);
+    }
+  };
+
+  const submitData = async () => {
+    try {
+      setShowDialog(true);
+      const user = await sendUser();
+      user && console.log(`User Id from DB: ${user?.id}`);
+
+      if (user) {
+        if (!isEmptyObject(data.ratings)) {
+          try {
+            const ratingData = await sendNormalRating(user?.id);
+            ratingData && console.log(`Rating data: ${ratingData}`);
+            notification.ratingSubmitted();
+          } catch (error) {
+            console.error("Failed to insert ratings:", error);
+            notification.error("Failed to submit ratings");
+          }
+        }
+
+        if (!isEmptyObject(data.otherCriteria)) {
+          try {
+            const otherCriterion = {
+              user_id: user?.id,
+              criteria: data.otherCriteria?.otherValue,
+              ratings: data.otherCriteria?.otherRating,
+              comments: data.otherCriteria?.otherReason,
+              company_id: company_id,
+              department: data.otherCriteria?.otherDepartment,
+            };
+            const otherData = await insertOther(otherCriterion);
+            otherData && console.log(`Other Criterion data: ${otherData}`);
+          } catch (error) {
+            console.error("Failed to insert otherCriterion Data:", error);
+            notification.error("Failed to submit other-criterion rating");
+          }
+        }
+
+        if (!isEmptyObject(data.suggestionBox)) {
+          try {
+            sendFeedBack(user?.id);
+            notification.success("suggestion has been sent");
+          } catch (error) {
+            console.error("Failed to insert otherCriterion Data:", error);
+            notification.error("Failed to submit other-criterion rating");
+          }
+        }
+
+        if (user === "sms") {
+          notification.smsSent(data?.phoneNumber);
+        }
+
+        cleaner();
+      } else {
+        console.log("User details could not be determined");
+      }
+    } catch (error) {
+      console.error("Error inserting user:", error);
+      notification.error("Something went wrong. Please try again.");
+    } finally {
+      setTimeout(() => {
+        setShowDialog(false);
+      }, 2000);
+    }
+  };
 
   return (
     <>
@@ -67,13 +251,15 @@ const { phoneNumber, username, email } = data;
             <CardTitle className="text-3xl font-bold text-slate-800">
               Tell us about yourself
             </CardTitle>
-           
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <Label
+                  htmlFor="username"
+                  className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                >
                   <User className="w-4 h-4" />
                   Full Name *
                 </Label>
@@ -89,7 +275,10 @@ const { phoneNumber, username, email } = data;
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phoneNumber" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <Label
+                  htmlFor="phoneNumber"
+                  className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                >
                   <Phone className="w-4 h-4" />
                   Phone Number *
                 </Label>
@@ -105,7 +294,10 @@ const { phoneNumber, username, email } = data;
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <Label
+                  htmlFor="email"
+                  className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                >
                   <Mail className="w-4 h-4" />
                   Email (Optional)
                 </Label>
@@ -129,11 +321,11 @@ const { phoneNumber, username, email } = data;
 
             <div className="pt-4">
               <Button
-                onClick={handleNext}
+                onClick={submitData}
                 size="lg"
                 className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
               >
-                Continue
+                Submit
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </div>
@@ -141,45 +333,31 @@ const { phoneNumber, username, email } = data;
         </Card>
       </div>
 
-      {/* Dialog Bottom Sheet */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-md mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center mb-2">
-              Choose Your Preference
-            </DialogTitle>
-            <p className="text-slate-600 text-center">How would you like to proceed with your rating?</p>
-          </DialogHeader>
-          
-          <div className="flex flex-col gap-4 mt-6">
-            <Button
-              onClick={handleRateNow}
-              className="group  flex items-center justify-center gap-4 bg-gradient-to-r from-blue-600 to-purple-600
-               hover:from-blue-700 hover:to-purple-700 text-white py-8 px-3 
-               rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl  "
-            >
-              <div className="p-2 bg-white/20 rounded-full">
-                <Star className="w-6 h-6" />
-              </div>
-              <div className="text-center">
-                <div className="font-bold">Rate Now</div>
-                <div className="text-sm opacity-90 ">Complete your rating immediately</div>
-              </div>
-            </Button>
-            
-            <Button
-              onClick={handleRateLater}
-              variant="outline"
-              className="group flex items-center justify-center gap-4 border-2 border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-800 py-8 px-3 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 bg-white hover:bg-slate-50"
-            >
-              <div className="p-2 bg-slate-100 rounded-full">
-                <Clock className="w-6 h-6" />
-              </div>
-              <div className="text-center">
-                <div className="font-bold">Rate Later</div>
-                <div className="text-sm opacity-70">We'll send you a reminder via SMS</div>
-              </div>
-            </Button>
+      {/* Custom Success Popup */}
+      <Dialog open={showDialog}>
+        <DialogContent className="max-w-md text-center">
+          <div className="p-8">
+            {/* Success Icon */}
+            <Avatar className="w-20 h-20 mx-auto mb-6">
+              <AvatarFallback className="bg-green-500 text-white">
+                <FiCheck className="w-10 h-10" />
+              </AvatarFallback>
+            </Avatar>
+            <DialogTitle></DialogTitle>
+
+            {/* Success Message */}
+            <h3 className="text-3xl font-bold text-slate-800 mb-4">
+              Thank You!
+            </h3>
+            <p className="text-xl text-slate-600 mb-6">
+              Your feedback has been submitted successfully.
+            </p>
+
+            {/* Loading indicator */}
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700"></div>
+            </div>
+            <p className="text-slate-500 mt-4">Redirecting...</p>
           </div>
         </DialogContent>
       </Dialog>
