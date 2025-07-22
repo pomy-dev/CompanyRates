@@ -1,19 +1,62 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Star, ArrowRight, Menu, Building2, Heart, Users, TrendingUp, MessageSquare, LockKeyhole } from "lucide-react";
+import {
+  Star,
+  ArrowRight,
+  Menu,
+  Building2,
+  Heart,
+  Users,
+  TrendingUp,
+  MessageSquare,
+  LockKeyhole,
+  Clock,
+  X,
+} from "lucide-react";
+import logo from "../../assets/images/company.jpg";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { fetchCompanyDepartments } from "../../services/companyService";
 import { getIconForDepartment } from "../../utils/iconSelector";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
+import { Card, CardContent,} from "../components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
+import { Badge } from "../components/ui/badge";
+//local modules
+import ratenow from "../../assets/images/ratenow.png";
+import ratelater from "../../assets/images/ratelater.png";
+import { useDataContext } from "../data-context";
+import { Input } from "../components/ui/input";
+import { CardTitle } from "../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
+import { Label } from "../components/ui/label";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { useNotification } from "../components/ui/notification";
 
 function WelcomeScreen() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const [companyLogo, setCompanyLogo] = useState(null);
+
+
+  //global  data context :
+  const {setData } = useDataContext();
+
+  //show dailog :
+  const [showDialog, setShowDialog] = useState(false);
+  const { notification } = useNotification();
 
   const fetchAndCacheDepartments = async () => {
     const company_id = localStorage.getItem("company_id");
@@ -70,6 +113,16 @@ function WelcomeScreen() {
   };
 
   const handleStart = () => {
+    setShowDialog(true);
+  };
+
+  const handleRateNow = () => {
+    // notification.userSaved(username);
+    router.push("/service-point");
+  };
+
+  const handleRateLater = () => {
+     setData((prevData) => ({ ...prevData, "sms": true }));
     router.push("/user-details");
   };
 
@@ -102,7 +155,9 @@ function WelcomeScreen() {
               <Building2 className="w-6 h-6 text-white" />
             </div>
           )}
-          <span className="text-lg font-semibold text-slate-800">Rating System</span>
+          <span className="text-lg font-semibold text-slate-800">
+            Rating System
+          </span>
         </div>
 
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -142,7 +197,8 @@ function WelcomeScreen() {
             <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight">
               We Value Your
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                {" "}Feedback!
+                {" "}
+                Feedback!
               </span>
             </h1>
 
@@ -181,8 +237,12 @@ function WelcomeScreen() {
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Heart className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="font-semibold text-slate-800 mb-2">Easy to Use</h3>
-                <p className="text-slate-600 text-sm">Simple and intuitive rating process</p>
+                <h3 className="font-semibold text-slate-800 mb-2">
+                  Easy to Use
+                </h3>
+                <p className="text-slate-600 text-sm">
+                  Simple and intuitive rating process
+                </p>
               </CardContent>
             </Card>
 
@@ -191,8 +251,12 @@ function WelcomeScreen() {
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <TrendingUp className="w-6 h-6 text-purple-600" />
                 </div>
-                <h3 className="font-semibold text-slate-800 mb-2">Real Impact</h3>
-                <p className="text-slate-600 text-sm">Your feedback helps us improve</p>
+                <h3 className="font-semibold text-slate-800 mb-2">
+                  Real Impact
+                </h3>
+                <p className="text-slate-600 text-sm">
+                  Your feedback helps us improve
+                </p>
               </CardContent>
             </Card>
 
@@ -202,12 +266,63 @@ function WelcomeScreen() {
                   <LockKeyhole className="w-6 h-6 text-green-600" />
                 </div>
                 <h3 className="font-semibold text-slate-800 mb-2">secured</h3>
-                <p className="text-slate-600 text-sm">We prioritize your privacy</p>
+                <p className="text-slate-600 text-sm">
+                  We prioritize your privacy
+                </p>
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
+
+      {/* Dialog Bottom Sheet */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center mb-2">
+              Choose Your Preference
+            </DialogTitle>
+            <p className="text-slate-600 text-center">
+              How would you like to proceed with your rating?
+            </p>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 mt-6">
+            <Button
+              onClick={handleRateNow}
+              className="group  flex items-center justify-center gap-4 bg-gradient-to-r from-blue-600 to-purple-600
+               hover:from-blue-700 hover:to-purple-700 text-white py-8 px-3 
+               rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl  "
+            >
+              <div className="p-2 bg-white/20 rounded-full">
+                <Star className="w-6 h-6" />
+              </div>
+              <div className="text-center">
+                <div className="font-bold">Rate Now</div>
+                <div className="text-sm opacity-90 ">
+                  Complete your rating immediately
+                </div>
+              </div>
+            </Button>
+
+            <Button
+              onClick={handleRateLater}
+              variant="outline"
+              className="group flex items-center justify-center gap-4 border-2 border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-800 py-8 px-3 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 bg-white hover:bg-slate-50"
+            >
+              <div className="p-2 bg-slate-100 rounded-full">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div className="text-center">
+                <div className="font-bold">Rate Later</div>
+                <div className="text-sm opacity-70">
+                  We'll send you a reminder via SMS
+                </div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
