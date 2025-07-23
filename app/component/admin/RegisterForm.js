@@ -231,7 +231,7 @@ function RegistrationForm({ onRegister, onBack }) {
   const prevStep = () => setCurrentStep(currentStep - 1);
 
   return (
-    <div className="h-screen w-full bg-gradient-to-br from-blue-100 via-white to-purple-100 flex items-center justify-center p-2 overflow-y-auto">
+    <div className="w-full bg-gradient-to-br from-blue-100 via-white to-purple-100 flex items-center justify-center p-2 overflow-y-auto">
       <div className="max-w-4xl mx-auto">
         <div className="rounded-2xl shadow-xl p-2">
           <div className='justify-center items-center'>

@@ -13,15 +13,14 @@ import {
   Lightbulb,
   Target,
   MapPin,
-  Mail,
-  Phone,
-  Calendar,
-  Filter,
-  Search
+  Plus,
+  Search,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../../app-context/auth-context';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
+import BranchModal from './BranchModal'
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -94,7 +93,7 @@ function Dashboard() {
         .eq('company_id', user?.id);
 
       if (error) {
-        setError(error.message);
+        setError(error?.message);
         return;
       }
       if (!data) return;
@@ -106,11 +105,11 @@ function Dashboard() {
       let totalSum = 0;
       let totalCount = 0;
 
-      data.forEach((r) => {
-        const ratingObj = typeof r.rating === 'string' ? JSON.parse(r.rating) : r.rating;
+      data?.forEach((r) => {
+        const ratingObj = typeof r?.rating === 'string' ? JSON.parse(r?.rating) : r?.rating;
         const scores = Object.values(ratingObj).filter(n => typeof n === 'number');
 
-        scores.forEach((score) => {
+        scores?.forEach((score) => {
           const rounded = Math.round(score);
           if (distribution[rounded] !== undefined) distribution[rounded]++;
           totalSum += score;
@@ -121,7 +120,7 @@ function Dashboard() {
       const avg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : 0;
 
       setDistribution(distribution);
-      setTotalRatings(data.length);
+      setTotalRatings(data?.length);
       setAverageRating(avg);
     }
 
@@ -387,6 +386,24 @@ function Dashboard() {
     }],
   };
 
+  const mockBranches = [
+    { id: 1, name: "Mbabane", totalRatings: 50, averageRating: 4.2 },
+    { id: 2, name: "Manzini", totalRatings: 30, averageRating: 3.8 },
+    { id: 3, name: "Nhlangano", totalRatings: 15, averageRating: 4.7 },
+    { id: 4, name: "Siteki", totalRatings: 5, averageRating: 2.9 },
+    { id: 5, name: "Pigg's Peak", totalRatings: 12, averageRating: 3.5 },
+  ];
+
+  const [branches, setBranches] = useState(mockBranches);
+  // const [selectedBranch, setSelectedBranch] = useState(null);
+  const [showBranchModal, setShowBranchModal] = useState(false);
+
+
+  const handleSwitchBranch = (branch) => {
+
+  }
+
+
   return (
     <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
@@ -415,13 +432,43 @@ function Dashboard() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleTest}
-              className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <LogOut className="h-5 w-5 mr-2" />
-              Logout
-            </button>
+
+            <div className="flex items-center space-x-4">
+              {/* Branch Selector */}
+              {branches.length > 0 && (
+                <div className="relative">
+                  <select
+                    value={branches.id || ''}
+                    onChange={(e) => handleSwitchBranch(e.target.value)}
+                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}-branch
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+              )}
+
+              {/* Add Branch Button */}
+              <button
+                onClick={() => setShowBranchModal(true)}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Branch
+              </button>
+
+              <button
+                onClick={handleTest}
+                className="flex items-center px-4 py-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors"
+              >
+                <LogOut className="h-5 w-5 mr-2" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -933,6 +980,14 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      <BranchModal
+        isOpen={showBranchModal}
+        onClose={() => { setShowBranchModal(false) }}
+        onSave={() => { }}
+        servicePoints={companyData?.servicePoints}
+      />
+
     </div>
   );
 }

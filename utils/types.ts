@@ -51,6 +51,18 @@ export interface Company {
   createdAt: Date;
 }
 
+export interface Branch {
+  id: string;
+  name: string;
+  location: string;
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+  manager: string;
+  isActive: boolean;
+  createdAt: Date;
+}
+
 export interface ServicePoint {
   id: string;
   name: string;

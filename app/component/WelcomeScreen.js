@@ -10,38 +10,28 @@ import {
   TrendingUp,
   MessageSquare,
   LockKeyhole,
-  Clock,
-  X,
+  Clock
 } from "lucide-react";
-import logo from "../../assets/images/company.jpg";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { fetchCompanyDepartments } from "../../services/companyService";
 import { getIconForDepartment } from "../../utils/iconSelector";
 import { Button } from "../components/ui/button";
-import { Card, CardContent,} from "../components/ui/card";
+import { Card, CardContent, } from "../components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
-import { Badge } from "../components/ui/badge";
 //local modules
-import ratenow from "../../assets/images/ratenow.png";
-import ratelater from "../../assets/images/ratelater.png";
 import { useDataContext } from "../data-context";
-import { Input } from "../components/ui/input";
-import { CardTitle } from "../components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
-import { Avatar, AvatarFallback } from "../components/ui/avatar";
-import { Label } from "../components/ui/label";
-import { Alert, AlertDescription } from "../components/ui/alert";
 import { useNotification } from "../components/ui/notification";
 
 function WelcomeScreen() {
@@ -52,7 +42,7 @@ function WelcomeScreen() {
 
 
   //global  data context :
-  const {setData } = useDataContext();
+  const { setData } = useDataContext();
 
   //show dailog :
   const [showDialog, setShowDialog] = useState(false);
@@ -92,13 +82,14 @@ function WelcomeScreen() {
         setMenuOpen(false);
       }
     }
+
     if (menuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       // getCompanyLogo();
     }
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      // getCompanyLogo();
     };
   }, [menuOpen]);
 
@@ -122,7 +113,7 @@ function WelcomeScreen() {
   };
 
   const handleRateLater = () => {
-     setData((prevData) => ({ ...prevData, "sms": true }));
+    setData((prevData) => ({ ...prevData, "sms": true }));
     router.push("/user-details");
   };
 
