@@ -51,6 +51,10 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint }) => {
     onClose();
   };
 
+  const handleRemove = (indexToRemove) => {
+    setCriteriaList(criteriaList.filter((_, index) => index !== indexToRemove));
+  }
+
   if (!isOpen) return null;
 
   return (
@@ -72,11 +76,20 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint }) => {
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
-            <div className="flex flex-row flex-wrap justify-around">
+            <div className="flex flex-row flex-wrap justify-start">
               {criteriaList.map((criteria, index) => (
-                <span key={index} className="ml-2 text-sm rounded-md bg-green-200 text-gray-700 px-2 py-1 m-1">
-                  {criteria.criteria} ({criteria.priority})
-                </span>
+                <div key={index} className={`group flex justify-between items-center mr-3 text-sm rounded-md ${criteria.priority === 'high priority'
+                  ? 'bg-red-200'
+                  : criteria.priority === 'medium priority'
+                    ? 'bg-blue-200'
+                    : 'bg-slate-200'
+                  } text-gray-700 px-2 py-1 m-1 transition-all duration-300`}>
+                  {criteria.criteria}
+                  <button type="button"
+                    onClick={() => handleRemove(index)} className='opacity-0 group-hover:opacity-100 transform group-hover:scale-100 scale-90 transition-all duration-300 ease-in-out ml-4 rounded-full bg-red-400 hover:bg-red-600'>
+                    <X className='h-5 w-5' />
+                  </button>
+                </div>
               ))}
             </div>
 
@@ -86,6 +99,7 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint }) => {
                 Add Criteria for {selectedServicePoint}
               </label>
               <div className="relative flex flex-col space-y-2">
+
                 <input
                   type="text"
                   name="criteria"
@@ -94,6 +108,7 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint }) => {
                   className={`w-full pl-4 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.criteria ? 'border-red-300' : 'border-gray-300'}`}
                   placeholder="Criteria name"
                 />
+
                 <select
                   name="priority"
                   value={newCriteria.priority}
@@ -104,6 +119,7 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint }) => {
                   <option value="medium priority">Medium Priority</option>
                   <option value="low priority">Low Priority</option>
                 </select>
+
                 <button
                   type="button"
                   onClick={handleAddCriteria}

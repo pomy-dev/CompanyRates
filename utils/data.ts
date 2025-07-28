@@ -312,3 +312,11 @@ export const mockCompanies: Company[] = [
     ]
   }
 ];
+
+export const mockBranches = [
+  { id: 1, name: "Mbabane", totalRatings: 50, averageRating: 4.2 },
+  { id: 2, name: "Manzini", totalRatings: 30, averageRating: 3.8 },
+  { id: 3, name: "Nhlangano", totalRatings: 15, averageRating: 4.7 },
+  { id: 4, name: "Siteki", totalRatings: 5, averageRating: 2.9 },
+  { id: 5, name: "Pigg's Peak", totalRatings: 12, averageRating: 3.5 },
+]

@@ -20,7 +20,8 @@ import {
 import { useAuth } from '../../../app-context/auth-context';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
-import BranchModal from './BranchModal'
+import BranchModal from './BranchModal';
+import { mockBranches } from '../../../utils/data';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -40,6 +41,8 @@ function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const [recentComments, setRecentComments] = useState([]);
   const [distribution, setDistribution] = useState({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+  const [branches, setBranches] = useState(mockBranches);
+  const [showBranchModal, setShowBranchModal] = useState(false);
 
   // Fetch company and service points data from Supabase
   useEffect(() => {
@@ -96,6 +99,7 @@ function Dashboard() {
         setError(error?.message);
         return;
       }
+
       if (!data) return;
 
       setRatings(data); // store full ratings
@@ -105,8 +109,20 @@ function Dashboard() {
       let totalSum = 0;
       let totalCount = 0;
 
+
       data?.forEach((r) => {
-        const ratingObj = typeof r?.rating === 'string' ? JSON.parse(r?.rating) : r?.rating;
+        if (!r?.rating) return;
+
+        let ratingObj;
+        try {
+          ratingObj = typeof r.rating === 'string' ? JSON.parse(r.rating) : r.rating;
+        } catch (error) {
+          console.warn('Invalid rating JSON:', r.rating);
+          return;
+        }
+
+        if (!ratingObj || typeof ratingObj !== 'object') return;
+
         const scores = Object.values(ratingObj).filter(n => typeof n === 'number');
 
         scores?.forEach((score) => {
@@ -116,6 +132,7 @@ function Dashboard() {
           totalCount++;
         });
       });
+
 
       const avg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : 0;
 
@@ -355,6 +372,11 @@ function Dashboard() {
     return service;
   }) || []
 
+  // const displayedServicePoints =
+  //   selectedBranchId
+  //     ? branches.find((b) => b.id === parseInt(selectedBranchId))?.servicePoints || []
+  //     : companyData?.servicePoints || [];
+
   // Mock data for ratings bar chart
   const ratingsBarData = {
     labels: mockServicePoints,
@@ -386,23 +408,30 @@ function Dashboard() {
     }],
   };
 
-  const mockBranches = [
-    { id: 1, name: "Mbabane", totalRatings: 50, averageRating: 4.2 },
-    { id: 2, name: "Manzini", totalRatings: 30, averageRating: 3.8 },
-    { id: 3, name: "Nhlangano", totalRatings: 15, averageRating: 4.7 },
-    { id: 4, name: "Siteki", totalRatings: 5, averageRating: 2.9 },
-    { id: 5, name: "Pigg's Peak", totalRatings: 12, averageRating: 3.5 },
-  ];
-
-  const [branches, setBranches] = useState(mockBranches);
-  // const [selectedBranch, setSelectedBranch] = useState(null);
-  const [showBranchModal, setShowBranchModal] = useState(false);
-
-
   const handleSwitchBranch = (branch) => {
 
   }
 
+  const handleSaveBranch = (formData) => {
+    const newBranchId = branches.length > 0 ? Math.max(...branches.map(b => b.id)) + 1 : 1;
+    const newBranch = {
+      id: newBranchId,
+      branchName: formData.name,
+      totalRatings: 0,
+      averageRating: 0,
+      location: formData.location,
+      address: formData.address,
+      contactEmail: formData.contactEmail,
+      contactPhone: formData.contactPhone,
+      manager: formData.manager,
+      isActive: formData.isActive,
+      servicePoints: formData.servicePoints,
+    };
+
+    console.log(newBranch);
+    setBranches([...branches, newBranch]);
+    setShowBranchModal(false);
+  };
 
   return (
     <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -442,7 +471,7 @@ function Dashboard() {
                     onChange={(e) => handleSwitchBranch(e.target.value)}
                     className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    {branches.map((branch) => (
+                    {branches?.map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}-branch
                       </option>
@@ -984,7 +1013,7 @@ function Dashboard() {
       <BranchModal
         isOpen={showBranchModal}
         onClose={() => { setShowBranchModal(false) }}
-        onSave={() => { }}
+        onSave={handleSaveBranch}
         servicePoints={companyData?.servicePoints}
       />
 
