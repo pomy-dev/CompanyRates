@@ -382,3 +382,8 @@ function ServiceScreen() {
 }
 
 export default ServiceScreen;
+
+
+
+[{"id" : 2, "title" : "Friendliness", "description" : null, "isRequired" : true, "displayOrder" : 1, "isActive" : true},
+   {"id" : 3, "title" : "Functionable", "description" : null, "isRequired" : true, "displayOrder" : 2, "isActive" : true}]
