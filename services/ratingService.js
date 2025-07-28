@@ -15,41 +15,7 @@ export const insertUser = async (userData) => {
   return data; // Return the inserted data
 };
 
-/**
- * Inserts a new rating into the 'ratings' table.
- * 
- * @param {Object} ratingData - The data to be inserted.
- * @param {number} ratingData.user_id - user Id from DB
- * @param {string} ratingData.companyId - The UUID of the company.
- * @param {Object} ratingData.rating - The rating data (as JSON).
- * @param {boolean} ratingData.sms - Whether to send an SMS.
- * @param {string} ratingData.servicePoint - The service point related to the rating.
- * 
- * @returns {Promise<Object>} - The result of the insert operation, including data or error.
- */
-export const insertRating = async (ratingData) => {
-  const { companyId, user_id, rating, sms, servicePoint } = ratingData;
 
-  const { data, error } = await supabase
-    .from('ratings')
-    .insert([
-      {
-        company_id: companyId,
-        rating: rating,
-        user_id: user_id,
-        sms: sms,
-        service_point: servicePoint,
-      },
-    ])
-    .select();
-
-  if (error) {
-    console.error('Error inserting rating:', error);
-    throw error; // Rethrow the error for handling in the calling function
-  }
-
-  return data; // Return the inserted data
-};
 
 
 /**

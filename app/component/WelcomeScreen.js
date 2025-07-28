@@ -63,16 +63,17 @@ function WelcomeScreen() {
 
   const fetchAndCacheDepartments = async () => {
     const company_id = localStorage.getItem("company_id");
-    console.log(`id from Welcome Screen ${company_id}`);
     const departments = await fetchCompanyDepartments(company_id);
 
     const enriched = departments.map((item) => ({
+      servicePointId:item.service_point_id,
       name: item.servicepoint,
       department: item.department,
       servicePoint: item.servicepoint,
-      iconName: getIconForDepartment(item.department).iconName, // Save icon name, not JSX
+      iconName: getIconForDepartment(item.department).iconName, // Save icon name
       companyId: item.company_id,
-      ratingCriteria: item.ratingCriteria,
+      isActive:item.isActive,
+      ratingCriteria: item.rating_criteria,
     }));
 
     localStorage.setItem("cachedDepartments", JSON.stringify(enriched));

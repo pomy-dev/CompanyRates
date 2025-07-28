@@ -28,10 +28,10 @@ import { FiCheck } from "react-icons/fi";
 //local moduules
 import {
   insertUser,
-  insertRating,
   insertFeedback,
   insertOther,
 } from "../../services/ratingService";
+import { supabase } from "../../services/supabaseService";
 
 function UserDetailsScreen() {
   const router = useRouter();
@@ -84,10 +84,10 @@ function UserDetailsScreen() {
   const isEmptyObject = (obj) => {
     for (let key in obj) {
       if (obj.hasOwnProperty(key)) {
-        return false; 
+        return false;
       }
     }
-    return true; 
+    return true;
   };
 
   const sendUser = async () => {
@@ -127,36 +127,6 @@ function UserDetailsScreen() {
     }
   };
 
-  const sendNormalRating = async (userId) => {
-    const newRating = {
-      companyId: company_id,
-      rating: data.ratings,
-      user_id: userId,
-      sms: true,
-      servicePoint: data.servicePoint?.name, 
-    };
-
-    try {
-      const result = await insertRating(newRating);
-
-      if (result) {
-        // Check if data.comments or suggestionBox exists
-        if (
-          !isEmptyObject(data.comments) ||
-          (data.suggestionBox && data.suggestionBox.trim() !== "")
-        ) {
-          try {
-            sendFeedBack(userId, result[0].id);
-          } catch (error) {
-            console.error("Failed to insert feedback:", error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Failed to insert rating:", error);
-    }
-  };
-
   const sendFeedBack = async (userId, rateID) => {
     const newFeedback = {
       user_id: userId,
@@ -183,11 +153,25 @@ function UserDetailsScreen() {
       if (user) {
         if (!isEmptyObject(data.ratings)) {
           try {
-            const ratingData = await sendNormalRating(user?.id);
-            ratingData && console.log(`Rating data: ${ratingData}`);
+            
+
+            const ratingJson = data.formartedRatings;
+            let {error } = await supabase.rpc(
+              "insert_multiple_ratings",
+              {
+                p_company_id: company_id,
+                p_ratings: ratingJson,
+                p_service_point: data.servicePoint.name,
+                p_sms: false,
+                p_user_id: user?.id,
+              }
+            );
+            if (error) throw error;
+
+
             notification.ratingSubmitted();
           } catch (error) {
-            console.error("Failed to insert ratings:", error);
+            console.error("Failed to insert ratings:", error.message);
             notification.error("Failed to submit ratings");
           }
         }
