@@ -15,6 +15,17 @@ export const insertUser = async (userData) => {
   return data; // Return the inserted data
 };
 
+export const getAllUsersByCompanyId = async (user_id) => {
+  const { data, error } = await supabase
+    .from('Users')
+    .select('*')
+    .eq('company_id', user_id);
+
+  if (error) throw error;
+
+  return data;
+}
+
 
 
 

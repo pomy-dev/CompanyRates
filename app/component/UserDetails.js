@@ -37,6 +37,7 @@ function UserDetailsScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [showDialog, setShowDialog] = useState(false);
+  const { user } = useAuth()
 
   //global  data context :
   const { data, setData } = useDataContext();
@@ -47,19 +48,6 @@ function UserDetailsScreen() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setData((prevData) => ({ ...prevData, [name]: value }));
-  };
-
-  const handleNext = () => {
-    if (!username || !phoneNumber) {
-      notification.validationError("name and phone number");
-      return;
-    }
-
-    setShowDialog(true);
-  };
-
-  const handleModalCancel = () => {
-    setShowDialog(false);
   };
 
   const cleaner = () => {
@@ -90,11 +78,13 @@ function UserDetailsScreen() {
     return true;
   };
 
-  const sendUser = async () => {
+  const sendUser = async (user_path) => {
     const userInfo = {
       name: data?.username,
       phone: data?.phoneNumber,
       email: data?.email,
+      user_path: user_path || 'rating_only',
+      company_id: company_id
     };
 
     if (data?.username || data?.phoneNumber) {
@@ -103,6 +93,8 @@ function UserDetailsScreen() {
           name: data?.username,
           phone: data?.phoneNumber,
           email: data?.email,
+          company_id: company_id,
+          user_path: user_path,
           sms: "waiting",
         });
 
@@ -147,7 +139,7 @@ function UserDetailsScreen() {
   const submitData = async () => {
     try {
       setShowDialog(true);
-      const user = await sendUser();
+      const user = (!isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)) ? await sendUser('both') : (!isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)) ? await sendUser('suggestion_only') : await sendUser('rating_only');
       user && console.log(`User Id from DB: ${user?.id}`);
 
       if (user) {
@@ -174,6 +166,17 @@ function UserDetailsScreen() {
             console.error("Failed to insert ratings:", error.message);
             notification.error("Failed to submit ratings");
           }
+        } else {
+          if (!isEmptyObject(data.suggestionBox)) {
+            try {
+              sendFeedBack(user?.id);
+              notification.success("suggestion has been sent");
+            } catch (error) {
+              console.error("Failed to insert otherCriterion Data:", error);
+              notification.error("Failed to submit other-criterion rating");
+            }
+          }
+
         }
 
         if (!isEmptyObject(data.otherCriteria)) {
@@ -188,16 +191,6 @@ function UserDetailsScreen() {
             };
             const otherData = await insertOther(otherCriterion);
             otherData && console.log(`Other Criterion data: ${otherData}`);
-          } catch (error) {
-            console.error("Failed to insert otherCriterion Data:", error);
-            notification.error("Failed to submit other-criterion rating");
-          }
-        }
-
-        if (!isEmptyObject(data.suggestionBox)) {
-          try {
-            sendFeedBack(user?.id);
-            notification.success("suggestion has been sent");
           } catch (error) {
             console.error("Failed to insert otherCriterion Data:", error);
             notification.error("Failed to submit other-criterion rating");
