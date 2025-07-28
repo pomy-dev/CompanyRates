@@ -13,7 +13,12 @@ import { FcCollaboration, FcEngineering } from "react-icons/fc";
 import { useDataContext } from "../data-context";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { Textarea } from "../components/ui/textarea";
 import { Badge } from "../components/ui/badge";
 
@@ -63,7 +68,9 @@ function SelectRatings() {
 
       // Only add "Other" if otherCriteria exists and has a valid otherValue
       if (otherCriteria?.otherValue) {
-        extendedCriteria.push(`Other: ${otherCriteria.otherValue.substring(0, 5) + '...'}`);
+        extendedCriteria.push(
+          `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
+        );
       }
 
       setSelectedCriteria(extendedCriteria);
@@ -79,10 +86,13 @@ function SelectRatings() {
         if (
           otherCriteria?.otherValue &&
           otherCriteria?.otherRating &&
-          !newRatings[`Other: ${otherCriteria.otherValue.substring(0, 5) + '...'}`]
+          !newRatings[
+            `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
+          ]
         ) {
-          newRatings[`Other: ${otherCriteria.otherValue.substring(0, 5) + '...'}`] =
-            otherCriteria.otherRating;
+          newRatings[
+            `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
+          ] = otherCriteria.otherRating;
         }
         return newRatings;
       });
@@ -97,7 +107,10 @@ function SelectRatings() {
 
     setRatings(updatedRatings);
 
-    if (otherCriteria?.otherValue && criterion === `Other: ${otherCriteria.otherValue.substring(0, 5) + '...'}`) {
+    if (
+      otherCriteria?.otherValue &&
+      criterion === `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
+    ) {
       setData((prev) => {
         const updated = {
           ...prev,
@@ -113,7 +126,9 @@ function SelectRatings() {
       // Store in global ratings
       const filteredRatings = { ...updatedRatings };
       if (otherCriteria?.otherValue) {
-        delete filteredRatings[`Other: ${otherCriteria.otherValue.substring(0, 5) + '...'}`]; // Ensure 'Other' is not included
+        delete filteredRatings[
+          `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
+        ]; // Ensure 'Other' is not included
       }
 
       setData((prev) => {
@@ -149,7 +164,8 @@ function SelectRatings() {
   const handleSaveComment = () => {
     if (
       otherCriteria?.otherValue &&
-      commentModal.criterion === `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
+      commentModal.criterion ===
+        `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
     ) {
       // Update otherCriteria.otherReason
       const updated = {
@@ -178,13 +194,60 @@ function SelectRatings() {
     setCommentModal({ open: false, criterion: "", text: "" });
   };
 
+  const generateRatingsForSupabase = () => {
+    const mappedRatings = [];
+
+    if (!selectedCriteria || selectedCriteria.length === 0 || !ratings)
+      return mappedRatings;
+
+    const cachedDepartments = JSON.parse(
+      localStorage?.getItem("cachedDepartments") || "[]"
+    );
+
+    selectedCriteria.forEach((criterionTitle) => {
+      let found = false;
+
+      for (const department of cachedDepartments) {
+        const matchedCriterion = department.ratingCriteria?.find(
+          (c) =>
+            c.title?.trim().toLowerCase() ===
+            criterionTitle.trim().toLowerCase()
+        );
+
+        if (matchedCriterion) {
+          const score = ratings[criterionTitle];
+          if (score !== undefined) {
+            mappedRatings.push({
+              rating_criteria_id: matchedCriterion.id,
+              score,
+            });
+          }
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        console.warn(
+          `Rating criterion "${criterionTitle}" not found in cached departments.`
+        );
+      }
+    });
+
+    return mappedRatings;
+  };
+
   const handleNext = () => {
+    console.log();
+    setData((prevData) => ({ ...prevData, "formartedRatings": generateRatingsForSupabase() }));
     router.push("/feedback");
   };
 
   const isNextDisabled = selectedCriteria.some(
     (criterion) =>
-      (!otherCriteria?.otherValue || criterion !== `Other: ${otherCriteria.otherValue.substring(0, 5) + '...'}`) &&
+      (!otherCriteria?.otherValue ||
+        criterion !==
+          `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`) &&
       (!ratings[criterion] || ratings[criterion] === 0)
   );
 
@@ -197,7 +260,9 @@ function SelectRatings() {
             <div className="flex justify-center mb-6">
               <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full">
                 {selectedService?.icon ? (
-                  <span className="text-white text-2xl">{selectedService.icon}</span>
+                  <span className="text-white text-2xl">
+                    {selectedService.icon}
+                  </span>
                 ) : (
                   <FaStar className="w-8 h-8 text-white" />
                 )}
@@ -209,7 +274,10 @@ function SelectRatings() {
             {selectedService && (
               <div className="flex items-center justify-center gap-2 mb-4">
                 <span className="text-slate-600 text-lg">Service:</span>
-                <Badge variant="outline" className="text-lg px-4 py-2 bg-blue-50 border-blue-200 text-blue-700">
+                <Badge
+                  variant="outline"
+                  className="text-lg px-4 py-2 bg-blue-50 border-blue-200 text-blue-700"
+                >
                   {selectedService.name}
                 </Badge>
               </div>
@@ -234,10 +302,11 @@ function SelectRatings() {
                     <FaStar
                       key={index}
                       size={30}
-                      className={`cursor-pointer transition-all duration-200 hover:scale-110 ${index <= ratings[criterion]
-                        ? "text-yellow-400"
-                        : "text-slate-300"
-                        }`}
+                      className={`cursor-pointer transition-all duration-200 hover:scale-110 ${
+                        index <= ratings[criterion]
+                          ? "text-yellow-400"
+                          : "text-slate-300"
+                      }`}
                       onClick={() => handleRating(criterion, index)}
                     />
                   ))}
@@ -270,10 +339,11 @@ function SelectRatings() {
             <Button
               onClick={handleNext}
               disabled={isNextDisabled}
-              className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 ${isNextDisabled
-                ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                }`}
+              className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 ${
+                isNextDisabled
+                  ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              }`}
             >
               Continue
               <FiArrowRight className="w-5 h-5" />
@@ -283,7 +353,12 @@ function SelectRatings() {
       </Card>
 
       {/* Comment Modal */}
-      <Dialog open={commentModal.open} onOpenChange={(open) => !open && setCommentModal({ open: false, criterion: "", text: "" })}>
+      <Dialog
+        open={commentModal.open}
+        onOpenChange={(open) =>
+          !open && setCommentModal({ open: false, criterion: "", text: "" })
+        }
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold mb-2 text-slate-800">
@@ -306,11 +381,7 @@ function SelectRatings() {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSaveComment}
-            >
-              Save
-            </Button>
+            <Button onClick={handleSaveComment}>Save</Button>
           </div>
         </DialogContent>
       </Dialog>

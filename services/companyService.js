@@ -2,7 +2,7 @@ import { supabase } from './supabaseService';
 
 export const fetchCompanyDepartments = async (company_id) => {
   const { data, error } = await supabase
-    .from("CompanyServicePoints")
+    .from('service_point_criteria_view')
     .select("*")
     .eq("company_id", company_id);
 
