@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Building2, MapPin, Mail, Phone, User, Binary, Boxes, MapPinned } from 'lucide-react';
 import CriteriaModal from './CriteriaModal';
+import { PiSpinner } from "react-icons/pi";
 
 const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
   const [formData, setFormData] = useState({
@@ -18,7 +19,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
   const [errors, setErrors] = useState({});
   const [isCriteriaOpen, setIsCriteriaOpen] = useState(false);
   const [selectedServicePoint, setSelectedServicePoint] = useState('');
-
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
@@ -94,36 +95,47 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setIsLoading(true);
 
-    if (validateForm()) {
-      const formattedData = {
-        ...formData,
-        servicePoints: formData.servicePoints?.map(sp => ({
-          name: sp.name,
-          criteria: sp.criteria.map(c => ({
-            title: c.criteria,
-            priority: c.priority,
+    try {
+      if (validateForm()) {
+
+        const formattedData = {
+          ...formData,
+          servicePoints: formData.servicePoints?.map(sp => ({
+            name: sp.name,
+            criteria: sp.criteria.map(c => ({
+              title: c.criteria,
+              priority: c.priority,
+            })),
           })),
-        })),
-      };
+        };
 
-      onSave(formattedData);
+        onSave(formattedData);
 
-      setFormData({
-        branchName: '',
-        branchCode: '',
-        branchType: '',
-        location: '',
-        address: '',
-        contactEmail: '',
-        contactPhone: '',
-        manager: '',
-        isActive: true,
-        servicePoints: [],
-      });
-      setErrors({});
+        setFormData({
+          branchName: '',
+          branchCode: '',
+          branchType: '',
+          location: '',
+          address: '',
+          contactEmail: '',
+          contactPhone: '',
+          manager: '',
+          isActive: true,
+          servicePoints: [],
+        });
+
+        setErrors({});
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.log(error)
+      setIsLoading(false);
+    } finally {
       onClose();
     }
+
   };
 
   const handleClose = () => {
@@ -345,7 +357,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
               type="submit"
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
             >
-              Add Branch
+              {isLoading ? <PiSpinner className="animate-spin" /> : 'Add'} Branch
             </button>
           </div>
         </form>

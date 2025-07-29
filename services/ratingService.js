@@ -115,9 +115,9 @@ export const insertOther = async (otherData) => {
  */
 
 export const insertNewBranch = async (branchData) => {
-  const { data: branches, error: branchesError } = await supabase
+  const { data, error } = await supabase
     .from('Branches')
-    .insert([
+    .insert(
       {
         company_id: branchData?.companyId,
         branch_name: branchData?.branchName,
@@ -129,13 +129,11 @@ export const insertNewBranch = async (branchData) => {
         contact_email: branchData?.contactEmail,
         manager_name: branchData?.manager,
         is_active: branchData?.isActive
-      }
-    ])
-    .select();
+      }).select();
 
-  if (branchesError) {
-    console.error('Error inserting into other table:', branchesError);
-    throw branchesError;
+  if (error) {
+    console.error('Error inserting into branches table:', error);
+    throw error;
   }
 
   // const { data: servicePoints, error: servicePointsError } = await supabase

@@ -22,6 +22,7 @@ import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, T
 import { Pie, Bar } from 'react-chartjs-2';
 import BranchModal from './BranchModal';
 import { mockBranches } from '../../../utils/data';
+import { insertNewBranch } from '../../../services/ratingService';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -409,10 +410,10 @@ function Dashboard() {
   };
 
   const handleSwitchBranch = (branch) => {
-
+    // setBranches(branch)
   }
 
-  const handleSaveBranch = (formData) => {
+  const handleSaveBranch = async (formData) => {
     const companyId = localStorage.getItem('company_id')
     const newBranch = {
       id: Date.now(),
@@ -436,6 +437,13 @@ function Dashboard() {
     };
 
     console.log(newBranch);
+
+    try {
+      const insertedBranch = await insertNewBranch(newBranch);
+    } catch (error) {
+      setError(error)
+    }
+
     setBranches([...branches, newBranch]);
     setShowBranchModal(false);
   };

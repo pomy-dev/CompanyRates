@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
         const phone = companyData.contactPhone;
         const logoUrl = companyData.logoUrl;
 
-        
+
 
         const { error: insertError } = await supabase
           .from('Companies')
@@ -55,18 +55,28 @@ export function AuthProvider({ children }) {
 
         servicePoints.forEach(async element => {
           try {
-            const { data, error } = await supabase
+            const { data: servicePoint, error: servicePointError } = await supabase
               .from('CompanyServicePoints')
               .insert({
                 company_id: companyId,
-                servicepoint: element.name, department: element.department, isActive: element.isActive, ratingCriteria: element.ratingCriteria
+                servicepoint: element.name,
+                department: element.department,
+                isActive: element.isActive
               })
               .select()
               .single();
 
-            if (error) {
-              console.error('Error creating service points request:', error.message);
-              throw error;
+            if (servicePointError) {
+              console.error('Error creating service points request:', servicePointError.message);
+              throw servicePointError;
+            }
+
+            if (servicePoint) {
+              element.ratingCriteria.forEach(async criteria => {
+                const ratingCriterions = await insertRatingCriteria(companyId, servicePoint?.id, criteria)
+
+                console.log(ratingCriterions);
+              });
             }
 
             console.log('Inserted Service Points:', data);
@@ -84,11 +94,36 @@ export function AuthProvider({ children }) {
           msg: 'Check your email to complete registration.',
         };
       }
-
     } catch (err) {
       return { error: true, msg: err.message || 'Something went wrong' };
     }
   };
+
+  const insertRatingCriteria = async (companyId, servicePoint_id, data) => {
+    try {
+      const { data: ratingCriteria, error: ratingCriteriaError } = await supabase
+        .from('RatingCriteria')
+        .insert({
+          company_id: companyId,
+          servicePoint_id: servicePoint_id,
+          title: data?.title,
+          is_required: data?.isRequired
+        })
+        .select();
+
+      if (ratingCriteriaError) {
+        console.error('Error creating rating criteria request:', ratingCriteriaError.message);
+        throw ratingCriteriaError;
+      }
+
+      console.log('Inserted Rating Criteria:', ratingCriteria);
+      return ratingCriteria;
+
+    } catch (error) {
+      console.log(`Error Occurred:${error}`)
+      return { error: true, msg: error.message || 'Something went wrong' };
+    }
+  }
 
   // Login with company credentials
   const loginCompany = async ({ email, password }) => {
