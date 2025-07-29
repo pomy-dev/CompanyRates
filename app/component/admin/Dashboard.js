@@ -413,19 +413,26 @@ function Dashboard() {
   }
 
   const handleSaveBranch = (formData) => {
-    const newBranchId = branches.length > 0 ? Math.max(...branches.map(b => b.id)) + 1 : 1;
+    const companyId = localStorage.getItem('company_id')
     const newBranch = {
-      id: newBranchId,
-      branchName: formData.name,
-      totalRatings: 0,
-      averageRating: 0,
+      id: Date.now(),
+      companyId: companyId?.trim(),
+      branchName: formData.branchName,
+      branchCode: formData.branchCode,
+      branchType: formData.branchType,
       location: formData.location,
       address: formData.address,
       contactEmail: formData.contactEmail,
       contactPhone: formData.contactPhone,
       manager: formData.manager,
       isActive: formData.isActive,
-      servicePoints: formData.servicePoints,
+      servicePoints: formData.servicePoints?.map(sp => ({
+        servicePoint: sp.name,
+        criteria: sp.criteria.map(c => ({
+          title: c.title,
+          priority: c.priority,
+        })),
+      }))
     };
 
     console.log(newBranch);

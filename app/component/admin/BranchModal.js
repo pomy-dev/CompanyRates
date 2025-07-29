@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { X, Building2, MapPin, Mail, Phone, User, Home } from 'lucide-react';
+import { X, Building2, MapPin, Mail, Phone, User, Binary, Boxes, MapPinned } from 'lucide-react';
 import CriteriaModal from './CriteriaModal';
 
 const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    branchName: '',
+    branchCode: '',
+    branchType: '',
     location: '',
     address: '',
     contactEmail: '',
@@ -13,7 +15,6 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
     isActive: true,
     servicePoints: [],
   });
-
   const [errors, setErrors] = useState({});
   const [isCriteriaOpen, setIsCriteriaOpen] = useState(false);
   const [selectedServicePoint, setSelectedServicePoint] = useState('');
@@ -75,7 +76,9 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) newErrors.name = 'Branch name is required';
+    if (!formData.branchName.trim()) newErrors.branchName = 'Branch name is required';
+    if (!formData.branchCode.trim()) newErrors.branchCode = 'Branch code is required';
+    if (!formData.branchType.trim()) newErrors.branchType = 'Branch type is required';
     if (!formData.location.trim()) newErrors.location = 'Location is required';
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (!formData.contactEmail.trim()) newErrors.contactEmail = 'Contact email is required';
@@ -95,7 +98,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
     if (validateForm()) {
       const formattedData = {
         ...formData,
-        servicePoints: formData.servicePoints.map(sp => ({
+        servicePoints: formData.servicePoints?.map(sp => ({
           name: sp.name,
           criteria: sp.criteria.map(c => ({
             title: c.criteria,
@@ -103,9 +106,13 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
           })),
         })),
       };
+
       onSave(formattedData);
+
       setFormData({
-        name: '',
+        branchName: '',
+        branchCode: '',
+        branchType: '',
         location: '',
         address: '',
         contactEmail: '',
@@ -120,8 +127,11 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
   };
 
   const handleClose = () => {
+
     setFormData({
-      name: '',
+      branchName: '',
+      branchCode: '',
+      branchType: '',
       location: '',
       address: '',
       contactEmail: '',
@@ -130,6 +140,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
       isActive: true,
       servicePoints: [],
     });
+
     setErrors({});
     setIsCriteriaOpen(false);
     setSelectedServicePoint('');
@@ -168,49 +179,73 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Branch Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch Name *</label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.name ? 'border-red-300' : 'border-gray-300'}`}
-                      placeholder="e.g., Downtown Branch, West Office"
-                    />
-                  </div>
-                  {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
+                  <label className="flex block text-sm font-medium text-gray-700 mb-2"><Building2 className="transform h-5 w-5 text-gray-400 mr-2 ml-2" />Branch Name *</label>
+                  <input
+                    type="text"
+                    name="branchName"
+                    value={formData.branchName}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.branchName ? 'border-red-300' : 'border-gray-300'}`}
+                    placeholder="e.g., Downtown Branch, West Office"
+                  />
+                  {errors.branchName && <p className="text-red-600 text-sm mt-1">{errors.branchName}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location *</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleInputChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.location ? 'border-red-300' : 'border-gray-300'}`}
-                      placeholder="City, State/Country"
-                    />
-                  </div>
+                  <label className="flex block text-sm font-medium text-gray-700 mb-2"><Binary className="transform h-5 w-5 text-gray-400 mr-2 ml-2" />Branch Code *</label>
+                  <input
+                    type="text"
+                    name="branchCode"
+                    value={formData.branchCode}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.branchCode ? 'border-red-300' : 'border-gray-300'}`}
+                    placeholder="Branch-A-2D, Branch-B-2D"
+                  />
+                  {errors.branchCode && <p className="text-red-600 text-sm mt-1">{errors.branchCode}</p>}
+                </div>
+
+                <div>
+                  <label className="flex block text-sm font-medium text-gray-700 mb-2"><Boxes className="h-5 w-5 text-gray-400 mr-2 ml-2" />Branch Type *</label>
+                  <input
+                    type='text'
+                    name="branchType"
+                    value={formData.branchType}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.branchType ? 'border-red-300' : 'border-gray-300'}`}
+                    placeholder="Kioks, Sub branch, Main branch"
+                  />
+                  {errors.branchType && <p className="text-red-600 text-sm mt-1">{errors.branchType}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Location Information */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Location Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="flex block text-sm font-medium text-gray-700 mb-2"><MapPin className="h-5 w-5 text-gray-400 mr-2 ml-2" />Location *</label>
+                  <input
+                    type="address"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.location ? 'border-red-300' : 'border-gray-300'}`}
+                    placeholder="Manzini, eSwatini,"
+                  />
                   {errors.location && <p className="text-red-600 text-sm mt-1">{errors.location}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Address *</label>
-                  <div className="relative">
-                    <Home className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <input
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.address ? 'border-red-300' : 'border-gray-300'}`}
-                      placeholder="Complete street address including postal code"
-                    />
-                  </div>
+                  <label className="flex block text-sm font-medium text-gray-700 mb-2"><MapPinned className="h-5 w-5 text-gray-400 mr-2 ml-2" />Address</label>
+                  <input
+                    type="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Complete street address & postal code"
+                  />
                   {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
                 </div>
               </div>
@@ -221,49 +256,40 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email *</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="email"
-                      name="contactEmail"
-                      value={formData.contactEmail}
-                      onChange={handleInputChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.contactEmail ? 'border-red-300' : 'border-gray-300'}`}
-                      placeholder="branch@company.com"
-                    />
-                  </div>
+                  <label className="flex block text-sm font-medium text-gray-700 mb-2"><Mail className="h-5 w-5 text-gray-400 mr-2 ml-2" />Contact Email *</label>
+                  <input
+                    type="email"
+                    name="contactEmail"
+                    value={formData.contactEmail}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.contactEmail ? 'border-red-300' : 'border-gray-300'}`}
+                    placeholder="branch@company.com"
+                  />
                   {errors.contactEmail && <p className="text-red-600 text-sm mt-1">{errors.contactEmail}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Contact Phone</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="tel"
-                      name="contactPhone"
-                      value={formData.contactPhone}
-                      onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
+                  <label className="flex block text-sm font-medium text-gray-700 mb-2"><Phone className="h-5 w-5 text-gray-400 mr-2 ml-2" />Contact Phone</label>
+                  <input
+                    type="tel"
+                    name="contactPhone"
+                    value={formData.contactPhone}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="+ (268) 7812 3456"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch Manager *</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      name="manager"
-                      value={formData.manager}
-                      onChange={handleInputChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.manager ? 'border-red-300' : 'border-gray-300'}`}
-                      placeholder="Manager's full name"
-                    />
-                  </div>
+                  <label className="flex block text-sm font-medium text-gray-700 mb-2"><User className="h-5 w-5 text-gray-400 mr-2 ml-2" />Branch Manager *</label>
+                  <input
+                    type="text"
+                    name="manager"
+                    value={formData.manager}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.manager ? 'border-red-300' : 'border-gray-300'}`}
+                    placeholder="Manager's full name"
+                  />
                   {errors.manager && <p className="text-red-600 text-sm mt-1">{errors.manager}</p>}
                 </div>
               </div>
@@ -275,7 +301,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
                 <label className="block text-lg font-semibold text-gray-900 mb-2">Select Service Point</label>
                 <div className="flex flex-row flex-wrap justify-around">
                   {servicePoints?.map((service, index) => (
-                    <label key={index} className="flex items-center rounded-md m-2">
+                    <label key={index} className="flex items-center rounded-full px-4 py-2 m-2 bg-blue-100">
                       <input
                         type="checkbox"
                         name={service?.name}

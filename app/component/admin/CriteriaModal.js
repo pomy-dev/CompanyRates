@@ -85,7 +85,7 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint }) => {
                     : 'bg-slate-200'
                   } text-gray-700 px-2 py-1 m-1 transition-all duration-300`}>
                   {criteria.criteria}
-                  <button type="button"
+                  <button key={index} type="button"
                     onClick={() => handleRemove(index)} className='opacity-0 group-hover:opacity-100 transform group-hover:scale-100 scale-90 transition-all duration-300 ease-in-out ml-4 rounded-full bg-red-400 hover:bg-red-600'>
                     <X className='h-5 w-5' />
                   </button>
