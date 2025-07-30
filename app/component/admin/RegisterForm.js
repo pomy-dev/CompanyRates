@@ -37,23 +37,7 @@ function RegistrationForm({ onRegister, onBack }) {
   let [loading, setLoading] = useState(false);
   let { registerCompany } = useAuth();
 
-  //create rating critea using supabase emthods :
-  const createRatingCriteria = async (criteriaList) => {
-    // Ensure the input is a valid JSONB array
-    const formattedList = criteriaList.map((item) => ({
-      title: item.title || null,
-      isRequired: item.isRequired ?? true,
-      companyId: item.companyId || null,
-      servicePointId: item.servicePointId || null,
-    }));
-
-    let { data, error } = await supabase.rpc("upsert_rating_criteria_bulk", {
-      p_criteria_list: formattedList,
-    });
-
-    if (error) console.error(error);
-    else console.log(data);
-  };
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,19 +92,11 @@ function RegistrationForm({ onRegister, onBack }) {
         ...companyData,
       });
 
-
-      const allRatingCriteria = companyData.servicePoints.flatMap(
-        (sp) => sp.ratingCriteria
-      );
-
-      createRatingCriteria(allRatingCriteria);
-
       setLoading(false);
       alert("Your Company Has been uploaded successfully.");
 
       // Store company logo URL in localStorage
       localStorage.setItem("companyLogo", publicUrl);
-      console.log(companyData);
 
       // Reset all fields and go back to step one
       setShowModal(false);
@@ -446,7 +422,7 @@ function RegistrationForm({ onRegister, onBack }) {
                         value={formData.contactPhone}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                        placeholder=""
+                        placeholder="+(268) 256 123"
                       />
                     </div>
 
@@ -522,7 +498,6 @@ function RegistrationForm({ onRegister, onBack }) {
                               onChange={(e) => handleTempServicePointChange('name', e.target.value)}
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
                               placeholder="Reception, Teller e.t.c"
-                              required
                             />
                           </div>
 
@@ -536,7 +511,6 @@ function RegistrationForm({ onRegister, onBack }) {
                               onChange={(e) => handleTempServicePointChange('department', e.target.value)}
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
                               placeholder="Support, Sales e.t.c"
-                              required
                             />
                           </div>
                         </div>
@@ -627,6 +601,7 @@ function RegistrationForm({ onRegister, onBack }) {
                             {editingIndex !== null ? 'Update Service Point' : 'Add Service Point'}
                           </button>
                         </div>
+
                       </div>
                     </div>
 
