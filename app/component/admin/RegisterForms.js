@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import { X, ChevronDown, ChevronUp, Upload, Image } from "lucide-react";
-import { useAuth } from "../../../app-context/auth-context";
-import { PiSpinner } from "react-icons/pi";
-import { supabase } from "../../../services/supabaseService";
-import { uploadFileToStorage } from "../../../services/uploadFile";
+import React, { useState } from 'react';
+import { X, ChevronDown, ChevronUp, Upload, Image } from 'lucide-react';
+import { useAuth } from '../../../app-context/auth-context';
+import { PiSpinner } from 'react-icons/pi';
+import { supabase } from '../../../services/supabaseService';
+import { uploadFileToStorage } from '../../../services/uploadFile';
 
 function RegistrationForm({ onRegister, onBack }) {
   let [currentStep, setCurrentStep] = useState(1);
@@ -37,46 +37,23 @@ function RegistrationForm({ onRegister, onBack }) {
   let [loading, setLoading] = useState(false);
   let { registerCompany } = useAuth();
 
-  //create rating critea using supabase emthods :
-  const createRatingCriteria = async (criteriaList) => {
-    // Ensure the input is a valid JSONB array
-    const formattedList = criteriaList.map((item) => ({
-      title: item.title || null,
-      isRequired: item.isRequired ?? true,
-      companyId: item.companyId || null,
-      servicePointId: item.servicePointId || null,
-    }));
-
-    let { data, error } = await supabase.rpc("upsert_rating_criteria_bulk", {
-      p_criteria_list: formattedList,
-    });
-
-    if (error) console.error(error);
-    else console.log(data);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      alert('Passwords do not match');
       setLoading(false);
       return;
     }
 
-    let publicUrl = "";
+    let publicUrl = '';
     if (formData.logoFile) {
       // Generate a unique file name (e.g., using timestamp or UUID)
-      const fileName = `company_logo_${Date.now()}.${formData.logoFile.name
-        .split(".")
-        .pop()}`;
-      publicUrl = await uploadFileToStorage(
-        `images/${fileName}`,
-        formData.logoFile
-      );
+      const fileName = `company_logo_${Date.now()}.${formData.logoFile.name.split('.').pop()}`;
+      publicUrl = await uploadFileToStorage(`images/${fileName}`, formData.logoFile);
       if (!publicUrl) {
-        alert("Failed to upload logo");
+        alert('Failed to upload logo');
         setLoading(false);
         return;
       }
@@ -90,33 +67,26 @@ function RegistrationForm({ onRegister, onBack }) {
         id: `sp${index + 1}`,
         ratingCriteria: sp.ratingCriteria.map((rc, rcIndex) => ({
           ...rc,
-          id: `rc${index + 1}-${rcIndex + 1}`,
-        })),
-      })),
+          id: `rc${index + 1}-${rcIndex + 1}`
+        }))
+      }))
     };
 
     try {
       const { data, error } = await supabase.auth.signUp({
         email: formData.contactEmail,
-        password: formData.password,
+        password: formData.password
       });
 
       if (error) throw error;
 
       await registerCompany({
         data,
-        ...companyData,
+        ...companyData
       });
 
-
-      const allRatingCriteria = companyData.servicePoints.flatMap(
-        (sp) => sp.ratingCriteria
-      );
-
-      createRatingCriteria(allRatingCriteria);
-
       setLoading(false);
-      alert("Your Company Has been uploaded successfully.");
+      alert('Your Company Has been uploaded successfully.');
 
       // Store company logo URL in localStorage
       localStorage.setItem("companyLogo", publicUrl);
@@ -125,25 +95,20 @@ function RegistrationForm({ onRegister, onBack }) {
       // Reset all fields and go back to step one
       setShowModal(false);
       setExpandedServicePoints({});
-      setTempRatingCriteria({ title: "", isRequired: false });
-      setTempServicePoint({
-        name: "",
-        department: "",
-        isActive: true,
-        ratingCriteria: [],
-      });
+      setTempRatingCriteria({ title: '', isRequired: false });
+      setTempServicePoint({ name: '', department: '', isActive: true, ratingCriteria: [] });
       setServicePoints([]);
       setFormData({
-        company_name: "",
-        location: "",
-        password: "",
-        confirmPassword: "",
-        industry: "",
-        contactEmail: "",
-        contactPhone: "",
-        logoFile: null,
+        company_name: '',
+        location: '',
+        password: '',
+        confirmPassword: '',
+        industry: '',
+        contactEmail: '',
+        contactPhone: '',
+        logoFile: null
       });
-      setLogoPreviewUrl("");
+      setLogoPreviewUrl('');
       setCurrentStep(1);
     } catch (error) {
       setLoading(false);
@@ -751,6 +716,6 @@ function RegistrationForm({ onRegister, onBack }) {
       </div>
     </div>
   );
-}
+};
 
 export default RegistrationForm;
