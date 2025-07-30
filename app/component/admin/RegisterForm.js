@@ -519,6 +519,7 @@ function RegistrationForm({ onRegister, onBack }) {
                             />
                           </div>
                         </div>
+                        
 
                         <div className="mt-4">
                           <label className="flex items-center">
