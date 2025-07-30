@@ -32,6 +32,7 @@ function RegistrationForm({ onRegister, onBack }) {
     isRequired: false
   });
   let [expandedServicePoints, setExpandedServicePoints] = useState({});
+  let [editingIndex, setEditingIndex] = useState(null);
   let [showModal, setShowModal] = useState(false);
   let [loading, setLoading] = useState(false);
   let { registerCompany } = useAuth();
@@ -76,6 +77,7 @@ function RegistrationForm({ onRegister, onBack }) {
         email: formData.contactEmail,
         password: formData.password
       });
+
       if (error) throw error;
 
       await registerCompany({
@@ -179,9 +181,19 @@ function RegistrationForm({ onRegister, onBack }) {
     });
   };
 
-  const isModalShown = (isShown) => {
-    setShowModal(isShown);
-  };
+  // const isModalShown = (isShown) => {
+  //   setShowModal(isShown);
+  //   if (!isShown) {
+  //     setTempServicePoint({
+  //       name: '',
+  //       department: '',
+  //       isActive: true,
+  //       ratingCriteria: [],
+  //     });
+  //     setTempRatingCriteria({ title: '', isRequired: false });
+  //     setEditingIndex(null);
+  //   }
+  // };
 
   const saveServicePoint = () => {
     if (!tempServicePoint.name.trim() || !tempServicePoint.department.trim()) {
@@ -192,14 +204,32 @@ function RegistrationForm({ onRegister, onBack }) {
       alert('Please add at least one rating criterion.');
       return;
     }
-    setServicePoints([...servicePoints, { ...tempServicePoint }]);
+    if (editingIndex !== null) {
+      // Update existing service point
+      setServicePoints((prev) =>
+        prev.map((sp, index) =>
+          index === editingIndex ? { ...tempServicePoint } : sp
+        )
+      );
+    } else {
+      // Add new service point
+      setServicePoints([...servicePoints, { ...tempServicePoint }]);
+    }
     setTempServicePoint({
       name: '',
       department: '',
       isActive: true,
-      ratingCriteria: []
+      ratingCriteria: [],
     });
+    setTempRatingCriteria({ title: '', isRequired: false });
+    setEditingIndex(null);
     setShowModal(false);
+  };
+
+  const editServicePoint = (index) => {
+    setTempServicePoint({ ...servicePoints[index] });
+    setEditingIndex(index);
+    setShowModal(true);
   };
 
   const removeServicePoint = (index) => {
@@ -232,12 +262,12 @@ function RegistrationForm({ onRegister, onBack }) {
 
   return (
     <div className="w-full bg-gradient-to-br from-blue-100 via-white to-purple-100 flex items-center justify-center p-2 overflow-y-auto">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="rounded-2xl shadow-xl p-2">
           <div className='justify-center items-center'>
             <div className='flex flex-col items-center justify-center mb-4'>
               <h1 className="text-2xl font-bold text-gray-900">Get Your Company Rated</h1>
-              <p className="text-gray-600 items-center justify-center">Step {currentStep} of 3</p>
+              <p className="text-gray-600 items-center justify-center">Step {currentStep} of 2</p>
             </div>
 
             <div className="flex items-center justify-center mb-4">
@@ -442,222 +472,251 @@ function RegistrationForm({ onRegister, onBack }) {
               )}
 
               {currentStep === 2 && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                <div className="w-5xl space-y-4">
+                  <div className="flex items-center justify-center mb-4">
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900">Service Points</h2>
-                      <p className="text-gray-600 text-sm mt-1">Set your Service-Points and their Rating-Criteria</p>
+                      <p className="text-gray-600 text-sm mt-1">
+                        Add service points and their rating criteria, and preview them on the right.
+                      </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => isModalShown(true)}
-                      className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-                    >
-                      Add Service Point
-                    </button>
                   </div>
 
-                  {servicePoints.length > 0 && (
-                    <div className="space-y-4">
-                      {servicePoints.map((sp, index) => (
-                        <div key={index} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                          <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-semibold text-gray-900 text-lg">{sp.name}</h3>
-                            <div>
-                              <p className="text-sm text-gray-600">Department: {sp.department}</p>
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                type="button"
-                                onClick={() => toggleExpandServicePoint(index)}
-                                className="text-blue-600 hover:text-blue-700 p-1 rounded-lg transition-colors"
-                              >
-                                {expandedServicePoints[index] ? (
-                                  <ChevronUp className="h-5 w-5" />
-                                ) : (
-                                  <ChevronDown className="h-5 w-5" />
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeServicePoint(index)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
-                              >
-                                <X className="h-5 w-5" />
-                              </button>
-                            </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left Column: Input Form (Modal) */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Add Service Point</h3>
+
+                      <div className="space-y-4">
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Service Name *
+                            </label>
+                            <input
+                              type="text"
+                              value={tempServicePoint.name}
+                              onChange={(e) => handleTempServicePointChange('name', e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
+                              placeholder="Reception, Teller e.t.c"
+                              required
+                            />
                           </div>
-                          <p className="text-sm text-gray-600">
-                            Status: {sp.isActive ? 'Active' : 'Inactive'}
-                          </p>
-                          {expandedServicePoints[index] && sp.ratingCriteria.length > 0 && (
-                            <div className="mt-3">
-                              <h4 className="font-medium text-gray-900 mb-2">Rating Criteria</h4>
-                              <div className="space-y-2">
-                                {sp.ratingCriteria.map((criterion, critIndex) => (
-                                  <div
-                                    key={critIndex}
-                                    className="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-200"
-                                  >
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-800">{criterion.title}</p>
-                                      <p className="text-sm text-gray-600">
-                                        {criterion.isRequired ? 'Required' : 'Optional'}
-                                      </p>
-                                    </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Department *
+                            </label>
+                            <input
+                              type="text"
+                              value={tempServicePoint.department}
+                              onChange={(e) => handleTempServicePointChange('department', e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
+                              placeholder="Support, Sales e.t.c"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={tempServicePoint.isActive}
+                              onChange={(e) => handleTempServicePointChange('isActive', e.target.checked)}
+                              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">Service is currently active</span>
+                          </label>
+                        </div>
+
+                        <div className="mt-6">
+                          <h4 className="font-medium text-gray-900 mb-2">Rating Criteria</h4>
+                          {tempServicePoint.ratingCriteria.length > 0 && (
+                            <div className="space-y-2 mb-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {tempServicePoint.ratingCriteria.map((criterion, critIndex) => (
+                                <div
+                                  key={critIndex}
+                                  className="flex justify-between items-center bg-white rounded-lg px-2 py-1 border border-gray-200"
+                                >
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-800">{criterion.title}</p>
+                                    <p className="text-sm text-gray-600">
+                                      {criterion.isRequired ? 'Required' : 'Optional'}
+                                    </p>
                                   </div>
-                                ))}
-                              </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeRatingCriteria(critIndex)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
                             </div>
                           )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
 
-                  {showModal && (
-                    <div className="border border-gray-200 rounded-xl p-3 bg-gray-50 mt-3">
-                      <div className='flex justify-end'>
-                        <button
-                          type="button"
-                          onClick={() => isModalShown(false)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
+                          <div className="border border-gray-200 rounded-lg p-4 bg-white">
+                            <div className="grid grid-cols-1 gap-3">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Criterion Title *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={tempRatingCriteria.title}
+                                  onChange={(e) => handleTempRatingCriteriaChange('title', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                  placeholder="e.g., Response Time, Professionalism"
+                                />
+                              </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Service Name *
-                          </label>
-                          <input
-                            type="text"
-                            value={tempServicePoint.name}
-                            onChange={(e) => handleTempServicePointChange('name', e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
-                            placeholder="e.g., Customer Support, Technical Consultation"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Department *
-                          </label>
-                          <input
-                            type="text"
-                            value={tempServicePoint.department}
-                            onChange={(e) => handleTempServicePointChange('department', e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
-                            placeholder="e.g., Support, Sales, Engineering"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={tempServicePoint.isActive}
-                            onChange={(e) => handleTempServicePointChange('isActive', e.target.checked)}
-                            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                          />
-                          <span className="ml-2 text-sm text-gray-700">Service is currently active</span>
-                        </label>
-                      </div>
-
-                      <div className="mt-6">
-                        <h4 className="font-medium text-gray-900 mb-2">Rating Criteria</h4>
-                        {tempServicePoint.ratingCriteria.length > 0 && (
-                          <div className="space-y-2 mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                            {tempServicePoint.ratingCriteria.map((criterion, critIndex) => (
-                              <div
-                                key={critIndex}
-                                className="flex justify-between items-center bg-white rounded-lg px-2 py-1 border border-gray-200"
-                              >
-                                <div>
-                                  <p className="text-sm font-medium text-gray-800">{criterion.title}</p>
-                                  <p className="text-sm text-gray-600">
-                                    {criterion.isRequired ? 'Required' : 'Optional'}
-                                  </p>
-                                </div>
+                              <div className="flex items-center justify-between">
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={tempRatingCriteria.isRequired}
+                                    onChange={(e) => handleTempRatingCriteriaChange('isRequired', e.target.checked)}
+                                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                  />
+                                  <span className="ml-2 text-sm text-gray-700">Required for rating</span>
+                                </label>
                                 <button
                                   type="button"
-                                  onClick={() => removeRatingCriteria(critIndex)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
+                                  onClick={saveRatingCriteria}
+                                  className="bg-blue-500 text-white px-3 py-1 rounded-lg font-medium hover:bg-blue-600 transition-colors"
                                 >
-                                  <X className="h-4 w-4" />
+                                  Save Criterion
                                 </button>
                               </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="border border-gray-200 rounded-lg p-4 bg-white">
-                          <div className="grid grid-cols-1 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Criterion Title *
-                              </label>
-                              <input
-                                type="text"
-                                value={tempRatingCriteria.title}
-                                onChange={(e) => handleTempRatingCriteriaChange('title', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                                placeholder="e.g., Response Time, Professionalism"
-                              />
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <label className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  checked={tempRatingCriteria.isRequired}
-                                  onChange={(e) => handleTempRatingCriteriaChange('isRequired', e.target.checked)}
-                                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                />
-                                <span className="ml-2 text-sm text-gray-700">Required for rating</span>
-                              </label>
-                              <button
-                                type="button"
-                                onClick={saveRatingCriteria}
-                                className="bg-blue-500 text-white px-3 py-1 rounded-lg font-medium hover:bg-blue-600 transition-colors"
-                              >
-                                Save
-                              </button>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="mt-4">
-                        <button
-                          type="button"
-                          onClick={saveServicePoint}
-                          className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-                        >
-                          Add
-                        </button>
+                        <div className="mt-4">
+                          <button
+                            type="button"
+                            onClick={saveServicePoint}
+                            className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                          >
+                            {editingIndex !== null ? 'Update Service Point' : 'Add Service Point'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  <div className="flex justify-between pt-4">
+
+                    {/* Right Column: Preview Section */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Service Points Preview</h3>
+                      {servicePoints.length === 0 ? (
+                        <div className="text-center text-gray-500">
+                          <p>No service points added yet.</p>
+                          <p className="text-sm mt-2">Add a service point to see it here.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {servicePoints.map((sp, index) => (
+                            <div
+                              key={index}
+                              className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm"
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-semibold text-gray-900 text-lg">{sp.name}</h4>
+                                <div className="flex space-x-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => editServicePoint(index)}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-1 rounded-lg transition-colors"
+                                  >
+                                    <svg
+                                      className="h-5 w-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandServicePoint(index)}
+                                    className="text-blue-600 hover:text-blue-700 p-1 rounded-lg transition-colors"
+                                  >
+                                    {expandedServicePoints[index] ? (
+                                      <ChevronUp className="h-5 w-5" />
+                                    ) : (
+                                      <ChevronDown className="h-5 w-5" />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeServicePoint(index)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
+                                  >
+                                    <X className="h-5 w-5" />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600">Department: {sp.department}</p>
+                              <p className="text-sm text-gray-600">
+                                Status: {sp.isActive ? 'Active' : 'Inactive'}
+                              </p>
+                              {expandedServicePoints[index] && sp.ratingCriteria.length > 0 && (
+                                <div className="mt-3">
+                                  <h5 className="font-medium text-gray-900 mb-2">Rating Criteria</h5>
+                                  <div className="space-y-2">
+                                    {sp.ratingCriteria.map((criterion, critIndex) => (
+                                      <div
+                                        key={critIndex}
+                                        className="flex justify-between items-center bg-gray-100 rounded-lg p-2"
+                                      >
+                                        <div>
+                                          <p className="text-sm font-medium text-gray-800">
+                                            {criterion.title}
+                                          </p>
+                                          <p className="text-sm text-gray-600">
+                                            {criterion.isRequired ? 'Required' : 'Optional'}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center pt-4">
                     <button
                       type="button"
                       onClick={prevStep}
-                      className="bg-gray-300 text-gray-700 px-8 py-3 rounded-lg font-medium hover:bg-gray-400 transition-colors shadow-sm"
+                      className="bg-gray-300 text-gray-700 px-8 py-3 ml-2 mr-2 rounded-lg font-medium hover:bg-gray-400 transition-colors shadow-sm"
                     >
                       Previous
                     </button>
+
                     <button
                       type="submit"
-                      className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors shadow-sm"
+                      disabled={servicePoints.length === 0}
+                      className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium shadow-sm transition-colors ${servicePoints.length === 0
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        }`}
                     >
-                      {loading && (<PiSpinner className="animate-spin" />)}
+                      {loading && <PiSpinner className="animate-spin" />}
                       Finish
                     </button>
                   </div>
