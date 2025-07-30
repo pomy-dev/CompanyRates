@@ -37,7 +37,7 @@ function UserDetailsScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [showDialog, setShowDialog] = useState(false);
-  const { user } = useAuth()
+  // const { user } = useAuth()
 
   //global  data context :
   const { data, setData } = useDataContext();
@@ -115,7 +115,8 @@ function UserDetailsScreen() {
         return error;
       }
     } else {
-      notification.error("User details not mentioned");
+      notification.error("Make sure you have enter your details");
+      return false;
     }
   };
 
@@ -138,11 +139,12 @@ function UserDetailsScreen() {
 
   const submitData = async () => {
     try {
-      setShowDialog(true);
+      
       const user = (!isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)) ? await sendUser('both') : (!isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)) ? await sendUser('suggestion_only') : await sendUser('rating_only');
       user && console.log(`User Id from DB: ${user?.id}`);
 
       if (user) {
+        setShowDialog(true);
         if (!isEmptyObject(data.ratings)) {
           try {
             
