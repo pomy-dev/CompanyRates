@@ -1,58 +1,81 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react';
-import { X, ChevronDown, ChevronUp, Upload, Image } from 'lucide-react';
-import { useAuth } from '../../../app-context/auth-context';
-import { PiSpinner } from 'react-icons/pi';
-import { supabase } from '../../../services/supabaseService';
-import { uploadFileToStorage } from '../../../services/uploadFile';
+import React, { useState } from "react";
+import { X, ChevronDown, ChevronUp, Upload, Image } from "lucide-react";
+import { useAuth } from "../../../app-context/auth-context";
+import { PiSpinner } from "react-icons/pi";
+import { supabase } from "../../../services/supabaseService";
+import { uploadFileToStorage } from "../../../services/uploadFile";
 
 function RegistrationForm({ onRegister, onBack }) {
   let [currentStep, setCurrentStep] = useState(1);
   let [formData, setFormData] = useState({
-    company_name: '',
-    location: '',
-    password: '',
-    confirmPassword: '',
-    industry: '',
-    contactEmail: '',
-    contactPhone: '',
+    company_name: "",
+    location: "",
+    password: "",
+    confirmPassword: "",
+    industry: "",
+    contactEmail: "",
+    contactPhone: "",
     logoFile: null, // Store the File object
   });
-  let [logoPreviewUrl, setLogoPreviewUrl] = useState(''); // Separate state for preview
+  let [logoPreviewUrl, setLogoPreviewUrl] = useState(""); // Separate state for preview
   let [servicePoints, setServicePoints] = useState([]);
   let [tempServicePoint, setTempServicePoint] = useState({
-    name: '',
-    department: '',
+    name: "",
+    department: "",
     isActive: true,
-    ratingCriteria: []
+    ratingCriteria: [],
   });
   let [tempRatingCriteria, setTempRatingCriteria] = useState({
-    title: '',
-    isRequired: false
+    title: "",
+    isRequired: false,
   });
   let [expandedServicePoints, setExpandedServicePoints] = useState({});
   let [showModal, setShowModal] = useState(false);
   let [loading, setLoading] = useState(false);
   let { registerCompany } = useAuth();
 
+  //create rating critea using supabase emthods :
+  const createRatingCriteria = async (criteriaList) => {
+    // Ensure the input is a valid JSONB array
+    const formattedList = criteriaList.map((item) => ({
+      title: item.title || null,
+      isRequired: item.isRequired ?? true,
+      companyId: item.companyId || null,
+      servicePointId: item.servicePointId || null,
+    }));
+
+    let { data, error } = await supabase.rpc("upsert_rating_criteria_bulk", {
+      p_criteria_list: formattedList,
+    });
+
+    if (error) console.error(error);
+    else console.log(data);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      alert("Passwords do not match");
       setLoading(false);
       return;
     }
 
-    let publicUrl = '';
+    let publicUrl = "";
     if (formData.logoFile) {
       // Generate a unique file name (e.g., using timestamp or UUID)
-      const fileName = `company_logo_${Date.now()}.${formData.logoFile.name.split('.').pop()}`;
-      publicUrl = await uploadFileToStorage(`images/${fileName}`, formData.logoFile);
+      const fileName = `company_logo_${Date.now()}.${formData.logoFile.name
+        .split(".")
+        .pop()}`;
+      publicUrl = await uploadFileToStorage(
+        `images/${fileName}`,
+        formData.logoFile
+      );
       if (!publicUrl) {
-        alert('Failed to upload logo');
+        alert("Failed to upload logo");
         setLoading(false);
         return;
       }
@@ -66,25 +89,31 @@ function RegistrationForm({ onRegister, onBack }) {
         id: `sp${index + 1}`,
         ratingCriteria: sp.ratingCriteria.map((rc, rcIndex) => ({
           ...rc,
-          id: `rc${index + 1}-${rcIndex + 1}`
-        }))
-      }))
+          id: `rc${index + 1}-${rcIndex + 1}`,
+        })),
+      })),
     };
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.contactEmail,
-        password: formData.password
-      });
-      if (error) throw error;
+      // const { data, error } = await supabase.auth.signUp({
+      //   email: formData.contactEmail,
+      //   password: formData.password,
+      // });
+      // if (error) throw error;
 
-      await registerCompany({
-        data,
-        ...companyData
-      });
+      // await registerCompany({
+      //   data,
+      //   ...companyData,
+      // });
+      const allRatingCriteria = companyData.servicePoints.flatMap(
+        (sp) => sp.ratingCriteria
+      );
+      console.log(allRatingCriteria);
+
+      createRatingCriteria(allRatingCriteria);
 
       setLoading(false);
-      alert('Your Company Has been uploaded successfully.');
+      alert("Your Company Has been uploaded successfully.");
 
       // Store company logo URL in localStorage
       localStorage.setItem("companyLogo", publicUrl);
@@ -93,20 +122,25 @@ function RegistrationForm({ onRegister, onBack }) {
       // Reset all fields and go back to step one
       setShowModal(false);
       setExpandedServicePoints({});
-      setTempRatingCriteria({ title: '', isRequired: false });
-      setTempServicePoint({ name: '', department: '', isActive: true, ratingCriteria: [] });
+      setTempRatingCriteria({ title: "", isRequired: false });
+      setTempServicePoint({
+        name: "",
+        department: "",
+        isActive: true,
+        ratingCriteria: [],
+      });
       setServicePoints([]);
       setFormData({
-        company_name: '',
-        location: '',
-        password: '',
-        confirmPassword: '',
-        industry: '',
-        contactEmail: '',
-        contactPhone: '',
-        logoFile: null
+        company_name: "",
+        location: "",
+        password: "",
+        confirmPassword: "",
+        industry: "",
+        contactEmail: "",
+        contactPhone: "",
+        logoFile: null,
       });
-      setLogoPreviewUrl('');
+      setLogoPreviewUrl("");
       setCurrentStep(1);
     } catch (error) {
       setLoading(false);
@@ -122,7 +156,7 @@ function RegistrationForm({ onRegister, onBack }) {
       setLogoPreviewUrl(previewUrl);
       setFormData({
         ...formData,
-        logoFile: file // Store the File object
+        logoFile: file, // Store the File object
       });
     }
   };
@@ -130,9 +164,9 @@ function RegistrationForm({ onRegister, onBack }) {
   const removeLogo = () => {
     setFormData({
       ...formData,
-      logoFile: null
+      logoFile: null,
     });
-    setLogoPreviewUrl('');
+    setLogoPreviewUrl("");
     // Revoke the object URL to free memory
     if (logoPreviewUrl) {
       URL.revokeObjectURL(logoPreviewUrl);
@@ -142,40 +176,45 @@ function RegistrationForm({ onRegister, onBack }) {
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   const handleTempServicePointChange = (field, value) => {
     setTempServicePoint({
       ...tempServicePoint,
-      [field]: value
+      [field]: value,
     });
   };
 
   const handleTempRatingCriteriaChange = (field, value) => {
     setTempRatingCriteria({
       ...tempRatingCriteria,
-      [field]: value
+      [field]: value,
     });
   };
 
   const saveRatingCriteria = () => {
     if (!tempRatingCriteria.title.trim()) {
-      alert('Please enter a criterion title.');
+      alert("Please enter a criterion title.");
       return;
     }
     setTempServicePoint({
       ...tempServicePoint,
-      ratingCriteria: [...tempServicePoint.ratingCriteria, { ...tempRatingCriteria }]
+      ratingCriteria: [
+        ...tempServicePoint.ratingCriteria,
+        { ...tempRatingCriteria },
+      ],
     });
-    setTempRatingCriteria({ title: '', isRequired: false });
+    setTempRatingCriteria({ title: "", isRequired: false });
   };
 
   const removeRatingCriteria = (index) => {
     setTempServicePoint({
       ...tempServicePoint,
-      ratingCriteria: tempServicePoint.ratingCriteria.filter((_, i) => i !== index)
+      ratingCriteria: tempServicePoint.ratingCriteria.filter(
+        (_, i) => i !== index
+      ),
     });
   };
 
@@ -185,20 +224,21 @@ function RegistrationForm({ onRegister, onBack }) {
 
   const saveServicePoint = () => {
     if (!tempServicePoint.name.trim() || !tempServicePoint.department.trim()) {
-      alert('Please enter both service name and department.');
+      alert("Please enter both service name and department.");
       return;
     }
     if (tempServicePoint.ratingCriteria.length === 0) {
-      alert('Please add at least one rating criterion.');
+      alert("Please add at least one rating criterion.");
       return;
     }
     setServicePoints([...servicePoints, { ...tempServicePoint }]);
     setTempServicePoint({
-      name: '',
-      department: '',
+      name: "",
+      department: "",
       isActive: true,
-      ratingCriteria: []
+      ratingCriteria: [],
     });
+
     setShowModal(false);
   };
 
@@ -214,17 +254,20 @@ function RegistrationForm({ onRegister, onBack }) {
   const toggleExpandServicePoint = (index) => {
     setExpandedServicePoints((prev) => ({
       ...prev,
-      [index]: !prev[index]
+      [index]: !prev[index],
     }));
   };
 
   const nextStep = () => {
     if (currentStep === 2) {
       if (servicePoints.length === 0) {
-        alert('Please save at least one service point with rating criteria before proceeding.');
+        alert(
+          "Please save at least one service point with rating criteria before proceeding."
+        );
         return;
       }
     }
+
     setCurrentStep(currentStep + 1);
   };
 
@@ -234,29 +277,34 @@ function RegistrationForm({ onRegister, onBack }) {
     <div className="w-full bg-gradient-to-br from-blue-100 via-white to-purple-100 flex items-center justify-center p-2 overflow-y-auto">
       <div className="max-w-4xl mx-auto">
         <div className="rounded-2xl shadow-xl p-2">
-          <div className='justify-center items-center'>
-            <div className='flex flex-col items-center justify-center mb-4'>
-              <h1 className="text-2xl font-bold text-gray-900">Get Your Company Rated</h1>
-              <p className="text-gray-600 items-center justify-center">Step {currentStep} of 3</p>
+          <div className="justify-center items-center">
+            <div className="flex flex-col items-center justify-center mb-4">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Get Your Company Rated
+              </h1>
+              <p className="text-gray-600 items-center justify-center">
+                Step {currentStep} of 3
+              </p>
             </div>
 
             <div className="flex items-center justify-center mb-4">
               {[1, 2].map((step) => (
                 <div key={step} className="flex items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${step <= currentStep
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-300 text-gray-600'
-                      }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      step <= currentStep
+                        ? "bg-emerald-600 text-white"
+                        : "bg-gray-300 text-gray-600"
+                    }`}
                   >
                     {step}
                   </div>
                   {step < 2 && (
                     <div
-                      className={`w-16 h-1 ${step < currentStep ? 'bg-emerald-600' : 'bg-gray-300'
-                        }`}
-                    >
-                    </div>
+                      className={`w-16 h-1 ${
+                        step < currentStep ? "bg-emerald-600" : "bg-gray-300"
+                      }`}
+                    ></div>
                   )}
                 </div>
               ))}
@@ -265,11 +313,15 @@ function RegistrationForm({ onRegister, onBack }) {
             <form onSubmit={handleSubmit}>
               {currentStep === 1 && (
                 <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Company Information</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                    Company Information
+                  </h2>
 
                   {/* Logo Upload Section */}
                   <div className="bg-gray-50 rounded-xl p-1 border-2 border-dashed border-gray-300">
-                    <h3 className="text-lg font-medium text-gray-900">Company Logo</h3>
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Company Logo
+                    </h3>
 
                     {logoPreviewUrl ? (
                       <div className="flex items-center space-x-6">
@@ -288,8 +340,12 @@ function RegistrationForm({ onRegister, onBack }) {
                           </button>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Logo uploaded successfully</p>
-                          <p className="text-xs text-gray-500 mt-1">Click the X to remove and upload a different logo</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Logo uploaded successfully
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Click the X to remove and upload a different logo
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -309,7 +365,9 @@ function RegistrationForm({ onRegister, onBack }) {
                             className="hidden"
                           />
                         </label>
-                        <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to 10MB</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
                       </div>
                     )}
                   </div>
@@ -445,8 +503,12 @@ function RegistrationForm({ onRegister, onBack }) {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900">Service Points</h2>
-                      <p className="text-gray-600 text-sm mt-1">Set your Service-Points and their Rating-Criteria</p>
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Service Points
+                      </h2>
+                      <p className="text-gray-600 text-sm mt-1">
+                        Set your Service-Points and their Rating-Criteria
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -460,11 +522,18 @@ function RegistrationForm({ onRegister, onBack }) {
                   {servicePoints.length > 0 && (
                     <div className="space-y-4">
                       {servicePoints.map((sp, index) => (
-                        <div key={index} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                        <div
+                          key={index}
+                          className="border border-gray-200 rounded-xl p-4 bg-gray-50"
+                        >
                           <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-semibold text-gray-900 text-lg">{sp.name}</h3>
+                            <h3 className="font-semibold text-gray-900 text-lg">
+                              {sp.name}
+                            </h3>
                             <div>
-                              <p className="text-sm text-gray-600">Department: {sp.department}</p>
+                              <p className="text-sm text-gray-600">
+                                Department: {sp.department}
+                              </p>
                             </div>
                             <div className="flex space-x-2">
                               <button
@@ -488,28 +557,37 @@ function RegistrationForm({ onRegister, onBack }) {
                             </div>
                           </div>
                           <p className="text-sm text-gray-600">
-                            Status: {sp.isActive ? 'Active' : 'Inactive'}
+                            Status: {sp.isActive ? "Active" : "Inactive"}
                           </p>
-                          {expandedServicePoints[index] && sp.ratingCriteria.length > 0 && (
-                            <div className="mt-3">
-                              <h4 className="font-medium text-gray-900 mb-2">Rating Criteria</h4>
-                              <div className="space-y-2">
-                                {sp.ratingCriteria.map((criterion, critIndex) => (
-                                  <div
-                                    key={critIndex}
-                                    className="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-200"
-                                  >
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-800">{criterion.title}</p>
-                                      <p className="text-sm text-gray-600">
-                                        {criterion.isRequired ? 'Required' : 'Optional'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                ))}
+                          {expandedServicePoints[index] &&
+                            sp.ratingCriteria.length > 0 && (
+                              <div className="mt-3">
+                                <h4 className="font-medium text-gray-900 mb-2">
+                                  Rating Criteria
+                                </h4>
+                                <div className="space-y-2">
+                                  {sp.ratingCriteria.map(
+                                    (criterion, critIndex) => (
+                                      <div
+                                        key={critIndex}
+                                        className="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-200"
+                                      >
+                                        <div>
+                                          <p className="text-sm font-medium text-gray-800">
+                                            {criterion.title}
+                                          </p>
+                                          <p className="text-sm text-gray-600">
+                                            {criterion.isRequired
+                                              ? "Required"
+                                              : "Optional"}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
                         </div>
                       ))}
                     </div>
@@ -517,7 +595,7 @@ function RegistrationForm({ onRegister, onBack }) {
 
                   {showModal && (
                     <div className="border border-gray-200 rounded-xl p-3 bg-gray-50 mt-3">
-                      <div className='flex justify-end'>
+                      <div className="flex justify-end">
                         <button
                           type="button"
                           onClick={() => isModalShown(false)}
@@ -535,7 +613,12 @@ function RegistrationForm({ onRegister, onBack }) {
                           <input
                             type="text"
                             value={tempServicePoint.name}
-                            onChange={(e) => handleTempServicePointChange('name', e.target.value)}
+                            onChange={(e) =>
+                              handleTempServicePointChange(
+                                "name",
+                                e.target.value
+                              )
+                            }
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
                             placeholder="e.g., Customer Support, Technical Consultation"
                             required
@@ -549,7 +632,12 @@ function RegistrationForm({ onRegister, onBack }) {
                           <input
                             type="text"
                             value={tempServicePoint.department}
-                            onChange={(e) => handleTempServicePointChange('department', e.target.value)}
+                            onChange={(e) =>
+                              handleTempServicePointChange(
+                                "department",
+                                e.target.value
+                              )
+                            }
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
                             placeholder="e.g., Support, Sales, Engineering"
                             required
@@ -562,37 +650,54 @@ function RegistrationForm({ onRegister, onBack }) {
                           <input
                             type="checkbox"
                             checked={tempServicePoint.isActive}
-                            onChange={(e) => handleTempServicePointChange('isActive', e.target.checked)}
+                            onChange={(e) =>
+                              handleTempServicePointChange(
+                                "isActive",
+                                e.target.checked
+                              )
+                            }
                             className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Service is currently active</span>
+                          <span className="ml-2 text-sm text-gray-700">
+                            Service is currently active
+                          </span>
                         </label>
                       </div>
 
                       <div className="mt-6">
-                        <h4 className="font-medium text-gray-900 mb-2">Rating Criteria</h4>
+                        <h4 className="font-medium text-gray-900 mb-2">
+                          Rating Criteria
+                        </h4>
                         {tempServicePoint.ratingCriteria.length > 0 && (
                           <div className="space-y-2 mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                            {tempServicePoint.ratingCriteria.map((criterion, critIndex) => (
-                              <div
-                                key={critIndex}
-                                className="flex justify-between items-center bg-white rounded-lg px-2 py-1 border border-gray-200"
-                              >
-                                <div>
-                                  <p className="text-sm font-medium text-gray-800">{criterion.title}</p>
-                                  <p className="text-sm text-gray-600">
-                                    {criterion.isRequired ? 'Required' : 'Optional'}
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => removeRatingCriteria(critIndex)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
+                            {tempServicePoint.ratingCriteria.map(
+                              (criterion, critIndex) => (
+                                <div
+                                  key={critIndex}
+                                  className="flex justify-between items-center bg-white rounded-lg px-2 py-1 border border-gray-200"
                                 >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-800">
+                                      {criterion.title}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      {criterion.isRequired
+                                        ? "Required"
+                                        : "Optional"}
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeRatingCriteria(critIndex)
+                                    }
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )
+                            )}
                           </div>
                         )}
 
@@ -605,7 +710,12 @@ function RegistrationForm({ onRegister, onBack }) {
                               <input
                                 type="text"
                                 value={tempRatingCriteria.title}
-                                onChange={(e) => handleTempRatingCriteriaChange('title', e.target.value)}
+                                onChange={(e) =>
+                                  handleTempRatingCriteriaChange(
+                                    "title",
+                                    e.target.value
+                                  )
+                                }
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                                 placeholder="e.g., Response Time, Professionalism"
                               />
@@ -616,10 +726,17 @@ function RegistrationForm({ onRegister, onBack }) {
                                 <input
                                   type="checkbox"
                                   checked={tempRatingCriteria.isRequired}
-                                  onChange={(e) => handleTempRatingCriteriaChange('isRequired', e.target.checked)}
+                                  onChange={(e) =>
+                                    handleTempRatingCriteriaChange(
+                                      "isRequired",
+                                      e.target.checked
+                                    )
+                                  }
                                   className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                                 />
-                                <span className="ml-2 text-sm text-gray-700">Required for rating</span>
+                                <span className="ml-2 text-sm text-gray-700">
+                                  Required for rating
+                                </span>
                               </label>
                               <button
                                 type="button"
@@ -657,7 +774,7 @@ function RegistrationForm({ onRegister, onBack }) {
                       type="submit"
                       className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors shadow-sm"
                     >
-                      {loading && (<PiSpinner className="animate-spin" />)}
+                      {loading && <PiSpinner className="animate-spin" />}
                       Finish
                     </button>
                   </div>
@@ -669,6 +786,6 @@ function RegistrationForm({ onRegister, onBack }) {
       </div>
     </div>
   );
-};
+}
 
 export default RegistrationForm;
