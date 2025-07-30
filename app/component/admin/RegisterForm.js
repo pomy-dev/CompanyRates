@@ -107,6 +107,7 @@ function RegistrationForm({ onRegister, onBack }) {
         ...companyData,
       });
 
+   
       const allRatingCriteria = companyData.servicePoints.flatMap(
         (sp) => sp.ratingCriteria
       );
@@ -534,32 +535,45 @@ function RegistrationForm({ onRegister, onBack }) {
                           />
                         </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Department *
-                            </label>
-                            <input
-                              type="text"
-                              value={tempServicePoint.department}
-                              onChange={(e) => handleTempServicePointChange('department', e.target.value)}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
-                              placeholder="Support, Sales e.t.c"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-4">
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={tempServicePoint.isActive}
-                              onChange={(e) => handleTempServicePointChange('isActive', e.target.checked)}
-                              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Service is currently active</span>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Department *
                           </label>
+                          <input
+                            type="text"
+                            value={tempServicePoint.department}
+                            onChange={(e) =>
+                              handleTempServicePointChange(
+                                "department",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
+                            placeholder="e.g., Support, Sales, Engineering"
+                            required
+                          />
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={tempServicePoint.isActive}
+                          onChange={(e) =>
+                            handleTempServicePointChange(
+                              "isActive",
+                              e.target.checked
+                            )
+                          }
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          Service is currently active
+                        </span>
+                      </label>
+                    </div>
 
                     <div className="mt-6">
                       <h4 className="font-medium text-gray-900 mb-2">
