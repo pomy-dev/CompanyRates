@@ -265,6 +265,7 @@ function RegistrationForm({ onRegister, onBack }) {
       <div className="max-w-6xl mx-auto">
         <div className="rounded-2xl shadow-xl p-2">
           <div className='justify-center items-center'>
+
             <div className='flex flex-col items-center justify-center mb-4'>
               <h1 className="text-2xl font-bold text-gray-900">Get Your Company Rated</h1>
               <p className="text-gray-600 items-center justify-center">Step {currentStep} of 2</p>
@@ -723,6 +724,7 @@ function RegistrationForm({ onRegister, onBack }) {
                 </div>
               )}
             </form>
+            
           </div>
         </div>
       </div>
