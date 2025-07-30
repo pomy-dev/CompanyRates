@@ -1,81 +1,58 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import { X, ChevronDown, ChevronUp, Upload, Image } from "lucide-react";
-import { useAuth } from "../../../app-context/auth-context";
-import { PiSpinner } from "react-icons/pi";
-import { supabase } from "../../../services/supabaseService";
-import { uploadFileToStorage } from "../../../services/uploadFile";
+import React, { useState } from 'react';
+import { X, ChevronDown, ChevronUp, Upload, Image } from 'lucide-react';
+import { useAuth } from '../../../app-context/auth-context';
+import { PiSpinner } from 'react-icons/pi';
+import { supabase } from '../../../services/supabaseService';
+import { uploadFileToStorage } from '../../../services/uploadFile';
 
 function RegistrationForm({ onRegister, onBack }) {
   let [currentStep, setCurrentStep] = useState(1);
   let [formData, setFormData] = useState({
-    company_name: "",
-    location: "",
-    password: "",
-    confirmPassword: "",
-    industry: "",
-    contactEmail: "",
-    contactPhone: "",
+    company_name: '',
+    location: '',
+    password: '',
+    confirmPassword: '',
+    industry: '',
+    contactEmail: '',
+    contactPhone: '',
     logoFile: null, // Store the File object
   });
-  let [logoPreviewUrl, setLogoPreviewUrl] = useState(""); // Separate state for preview
+  let [logoPreviewUrl, setLogoPreviewUrl] = useState(''); // Separate state for preview
   let [servicePoints, setServicePoints] = useState([]);
   let [tempServicePoint, setTempServicePoint] = useState({
-    name: "",
-    department: "",
+    name: '',
+    department: '',
     isActive: true,
-    ratingCriteria: [],
+    ratingCriteria: []
   });
   let [tempRatingCriteria, setTempRatingCriteria] = useState({
-    title: "",
-    isRequired: false,
+    title: '',
+    isRequired: false
   });
   let [expandedServicePoints, setExpandedServicePoints] = useState({});
   let [showModal, setShowModal] = useState(false);
   let [loading, setLoading] = useState(false);
   let { registerCompany } = useAuth();
 
-  //create rating critea using supabase emthods :
-  const createRatingCriteria = async (criteriaList) => {
-    // Ensure the input is a valid JSONB array
-    const formattedList = criteriaList.map((item) => ({
-      title: item.title || null,
-      isRequired: item.isRequired ?? true,
-      companyId: item.companyId || null,
-      servicePointId: item.servicePointId || null,
-    }));
-
-    let { data, error } = await supabase.rpc("upsert_rating_criteria_bulk", {
-      p_criteria_list: formattedList,
-    });
-
-    if (error) console.error(error);
-    else console.log(data);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      alert('Passwords do not match');
       setLoading(false);
       return;
     }
 
-    let publicUrl = "";
+    let publicUrl = '';
     if (formData.logoFile) {
       // Generate a unique file name (e.g., using timestamp or UUID)
-      const fileName = `company_logo_${Date.now()}.${formData.logoFile.name
-        .split(".")
-        .pop()}`;
-      publicUrl = await uploadFileToStorage(
-        `images/${fileName}`,
-        formData.logoFile
-      );
+      const fileName = `company_logo_${Date.now()}.${formData.logoFile.name.split('.').pop()}`;
+      publicUrl = await uploadFileToStorage(`images/${fileName}`, formData.logoFile);
       if (!publicUrl) {
-        alert("Failed to upload logo");
+        alert('Failed to upload logo');
         setLoading(false);
         return;
       }
@@ -89,32 +66,27 @@ function RegistrationForm({ onRegister, onBack }) {
         id: `sp${index + 1}`,
         ratingCriteria: sp.ratingCriteria.map((rc, rcIndex) => ({
           ...rc,
-          id: `rc${index + 1}-${rcIndex + 1}`,
-        })),
-      })),
+          id: `rc${index + 1}-${rcIndex + 1}`
+        }))
+      }))
     };
 
     try {
-      // const { data, error } = await supabase.auth.signUp({
-      //   email: formData.contactEmail,
-      //   password: formData.password,
-      // });
-      // if (error) throw error;
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.contactEmail,
+        password: formData.password
+      });
 
-      // await registerCompany({
-      //   data,
-      //   ...companyData,
-      // });
+      if (error) throw error;
+
+      await registerCompany({
+        data,
+        ...companyData
+      });
       
-      const allRatingCriteria = companyData.servicePoints.flatMap(
-        (sp) => sp.ratingCriteria
-      );
-      console.log(allRatingCriteria);
-
-      createRatingCriteria(allRatingCriteria);
 
       setLoading(false);
-      alert("Your Company Has been uploaded successfully.");
+      alert('Your Company Has been uploaded successfully.');
 
       // Store company logo URL in localStorage
       localStorage.setItem("companyLogo", publicUrl);
@@ -123,25 +95,20 @@ function RegistrationForm({ onRegister, onBack }) {
       // Reset all fields and go back to step one
       setShowModal(false);
       setExpandedServicePoints({});
-      setTempRatingCriteria({ title: "", isRequired: false });
-      setTempServicePoint({
-        name: "",
-        department: "",
-        isActive: true,
-        ratingCriteria: [],
-      });
+      setTempRatingCriteria({ title: '', isRequired: false });
+      setTempServicePoint({ name: '', department: '', isActive: true, ratingCriteria: [] });
       setServicePoints([]);
       setFormData({
-        company_name: "",
-        location: "",
-        password: "",
-        confirmPassword: "",
-        industry: "",
-        contactEmail: "",
-        contactPhone: "",
-        logoFile: null,
+        company_name: '',
+        location: '',
+        password: '',
+        confirmPassword: '',
+        industry: '',
+        contactEmail: '',
+        contactPhone: '',
+        logoFile: null
       });
-      setLogoPreviewUrl("");
+      setLogoPreviewUrl('');
       setCurrentStep(1);
     } catch (error) {
       setLoading(false);
@@ -157,7 +124,7 @@ function RegistrationForm({ onRegister, onBack }) {
       setLogoPreviewUrl(previewUrl);
       setFormData({
         ...formData,
-        logoFile: file, // Store the File object
+        logoFile: file // Store the File object
       });
     }
   };
@@ -165,9 +132,9 @@ function RegistrationForm({ onRegister, onBack }) {
   const removeLogo = () => {
     setFormData({
       ...formData,
-      logoFile: null,
+      logoFile: null
     });
-    setLogoPreviewUrl("");
+    setLogoPreviewUrl('');
     // Revoke the object URL to free memory
     if (logoPreviewUrl) {
       URL.revokeObjectURL(logoPreviewUrl);
@@ -177,45 +144,40 @@ function RegistrationForm({ onRegister, onBack }) {
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.value
     });
   };
 
   const handleTempServicePointChange = (field, value) => {
     setTempServicePoint({
       ...tempServicePoint,
-      [field]: value,
+      [field]: value
     });
   };
 
   const handleTempRatingCriteriaChange = (field, value) => {
     setTempRatingCriteria({
       ...tempRatingCriteria,
-      [field]: value,
+      [field]: value
     });
   };
 
   const saveRatingCriteria = () => {
     if (!tempRatingCriteria.title.trim()) {
-      alert("Please enter a criterion title.");
+      alert('Please enter a criterion title.');
       return;
     }
     setTempServicePoint({
       ...tempServicePoint,
-      ratingCriteria: [
-        ...tempServicePoint.ratingCriteria,
-        { ...tempRatingCriteria },
-      ],
+      ratingCriteria: [...tempServicePoint.ratingCriteria, { ...tempRatingCriteria }]
     });
-    setTempRatingCriteria({ title: "", isRequired: false });
+    setTempRatingCriteria({ title: '', isRequired: false });
   };
 
   const removeRatingCriteria = (index) => {
     setTempServicePoint({
       ...tempServicePoint,
-      ratingCriteria: tempServicePoint.ratingCriteria.filter(
-        (_, i) => i !== index
-      ),
+      ratingCriteria: tempServicePoint.ratingCriteria.filter((_, i) => i !== index)
     });
   };
 
@@ -225,17 +187,17 @@ function RegistrationForm({ onRegister, onBack }) {
 
   const saveServicePoint = () => {
     if (!tempServicePoint.name.trim() || !tempServicePoint.department.trim()) {
-      alert("Please enter both service name and department.");
+      alert('Please enter both service name and department.');
       return;
     }
     if (tempServicePoint.ratingCriteria.length === 0) {
-      alert("Please add at least one rating criterion.");
+      alert('Please add at least one rating criterion.');
       return;
     }
     setServicePoints([...servicePoints, { ...tempServicePoint }]);
     setTempServicePoint({
-      name: "",
-      department: "",
+      name: '',
+      department: '',
       isActive: true,
       ratingCriteria: [],
     });
@@ -255,20 +217,17 @@ function RegistrationForm({ onRegister, onBack }) {
   const toggleExpandServicePoint = (index) => {
     setExpandedServicePoints((prev) => ({
       ...prev,
-      [index]: !prev[index],
+      [index]: !prev[index]
     }));
   };
 
   const nextStep = () => {
     if (currentStep === 2) {
       if (servicePoints.length === 0) {
-        alert(
-          "Please save at least one service point with rating criteria before proceeding."
-        );
+        alert('Please save at least one service point with rating criteria before proceeding.');
         return;
       }
     }
-
     setCurrentStep(currentStep + 1);
   };
 
@@ -292,20 +251,19 @@ function RegistrationForm({ onRegister, onBack }) {
               {[1, 2].map((step) => (
                 <div key={step} className="flex items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      step <= currentStep
-                        ? "bg-emerald-600 text-white"
-                        : "bg-gray-300 text-gray-600"
-                    }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${step <= currentStep
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                      }`}
                   >
                     {step}
                   </div>
                   {step < 2 && (
                     <div
-                      className={`w-16 h-1 ${
-                        step < currentStep ? "bg-emerald-600" : "bg-gray-300"
-                      }`}
-                    ></div>
+                      className={`w-16 h-1 ${step < currentStep ? 'bg-emerald-600' : 'bg-gray-300'
+                        }`}
+                    >
+                    </div>
                   )}
                 </div>
               ))}
@@ -314,15 +272,11 @@ function RegistrationForm({ onRegister, onBack }) {
             <form onSubmit={handleSubmit}>
               {currentStep === 1 && (
                 <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    Company Information
-                  </h2>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Company Information</h2>
 
                   {/* Logo Upload Section */}
                   <div className="bg-gray-50 rounded-xl p-1 border-2 border-dashed border-gray-300">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Company Logo
-                    </h3>
+                    <h3 className="text-lg font-medium text-gray-900">Company Logo</h3>
 
                     {logoPreviewUrl ? (
                       <div className="flex items-center space-x-6">
@@ -341,12 +295,8 @@ function RegistrationForm({ onRegister, onBack }) {
                           </button>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            Logo uploaded successfully
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Click the X to remove and upload a different logo
-                          </p>
+                          <p className="text-sm font-medium text-gray-900">Logo uploaded successfully</p>
+                          <p className="text-xs text-gray-500 mt-1">Click the X to remove and upload a different logo</p>
                         </div>
                       </div>
                     ) : (
@@ -366,9 +316,7 @@ function RegistrationForm({ onRegister, onBack }) {
                             className="hidden"
                           />
                         </label>
-                        <p className="text-xs text-gray-500 mt-2">
-                          PNG, JPG, GIF up to 10MB
-                        </p>
+                        <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to 10MB</p>
                       </div>
                     )}
                   </div>
@@ -520,91 +468,6 @@ function RegistrationForm({ onRegister, onBack }) {
                     </button>
                   </div>
 
-                  {servicePoints.length > 0 && (
-                    <div className="space-y-4">
-                      {servicePoints.map((sp, index) => (
-                        <div
-                          key={index}
-                          className="border border-gray-200 rounded-xl p-4 bg-gray-50"
-                        >
-                          <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-semibold text-gray-900 text-lg">
-                              {sp.name}
-                            </h3>
-                            <div>
-                              <p className="text-sm text-gray-600">
-                                Department: {sp.department}
-                              </p>
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                type="button"
-                                onClick={() => toggleExpandServicePoint(index)}
-                                className="text-blue-600 hover:text-blue-700 p-1 rounded-lg transition-colors"
-                              >
-                                {expandedServicePoints[index] ? (
-                                  <ChevronUp className="h-5 w-5" />
-                                ) : (
-                                  <ChevronDown className="h-5 w-5" />
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeServicePoint(index)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
-                              >
-                                <X className="h-5 w-5" />
-                              </button>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            Status: {sp.isActive ? "Active" : "Inactive"}
-                          </p>
-                          {expandedServicePoints[index] &&
-                            sp.ratingCriteria.length > 0 && (
-                              <div className="mt-3">
-                                <h4 className="font-medium text-gray-900 mb-2">
-                                  Rating Criteria
-                                </h4>
-                                <div className="space-y-2">
-                                  {sp.ratingCriteria.map(
-                                    (criterion, critIndex) => (
-                                      <div
-                                        key={critIndex}
-                                        className="flex justify-between items-center bg-white rounded-lg p-3 border border-gray-200"
-                                      >
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-800">
-                                            {criterion.title}
-                                          </p>
-                                          <p className="text-sm text-gray-600">
-                                            {criterion.isRequired
-                                              ? "Required"
-                                              : "Optional"}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {showModal && (
-                    <div className="border border-gray-200 rounded-xl p-3 bg-gray-50 mt-3">
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => isModalShown(false)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -761,7 +624,97 @@ function RegistrationForm({ onRegister, onBack }) {
                         </button>
                       </div>
                     </div>
-                  )}
+
+                    {/* Right Column: Preview Section */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Service Points Preview</h3>
+                      {servicePoints.length === 0 ? (
+                        <div className="text-center text-gray-500">
+                          <p>No service points added yet.</p>
+                          <p className="text-sm mt-2">Add a service point to see it here.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {servicePoints.map((sp, index) => (
+                            <div
+                              key={index}
+                              className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm"
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-semibold text-gray-900 text-lg">{sp.name}</h4>
+                                <div className="flex space-x-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => editServicePoint(index)}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-1 rounded-lg transition-colors"
+                                  >
+                                    <svg
+                                      className="h-5 w-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                      />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandServicePoint(index)}
+                                    className="text-blue-600 hover:text-blue-700 p-1 rounded-lg transition-colors"
+                                  >
+                                    {expandedServicePoints[index] ? (
+                                      <ChevronUp className="h-5 w-5" />
+                                    ) : (
+                                      <ChevronDown className="h-5 w-5" />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeServicePoint(index)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition-colors"
+                                  >
+                                    <X className="h-5 w-5" />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600">Department: {sp.department}</p>
+                              <p className="text-sm text-gray-600">
+                                Status: {sp.isActive ? 'Active' : 'Inactive'}
+                              </p>
+                              {expandedServicePoints[index] && sp.ratingCriteria.length > 0 && (
+                                <div className="mt-3">
+                                  <h5 className="font-medium text-gray-900 mb-2">Rating Criteria</h5>
+                                  <div className="space-y-2">
+                                    {sp.ratingCriteria.map((criterion, critIndex) => (
+                                      <div
+                                        key={critIndex}
+                                        className="flex justify-between items-center bg-gray-100 rounded-lg p-2"
+                                      >
+                                        <div>
+                                          <p className="text-sm font-medium text-gray-800">
+                                            {criterion.title}
+                                          </p>
+                                          <p className="text-sm text-gray-600">
+                                            {criterion.isRequired ? 'Required' : 'Optional'}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   <div className="flex justify-between pt-4">
                     <button
@@ -787,6 +740,6 @@ function RegistrationForm({ onRegister, onBack }) {
       </div>
     </div>
   );
-}
+};
 
 export default RegistrationForm;
