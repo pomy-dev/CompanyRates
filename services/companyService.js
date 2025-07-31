@@ -37,19 +37,18 @@ export const insertServicePoint = async (companyId, servicePoint) => {
 //create rating critea using supabase emthods :
 export const createRatingCriteria = async (criteriaList) => {
   // Ensure the input is a valid JSONB array
-  const formattedList = criteriaList.map((item) => ({
+  const formattedList = criteriaList?.map((item) => ({
     title: item.title?.toLowerCase() || null,
-    isRequired: item.isRequired ?? true,
-    companyId: item.companyId || null,
-    servicePointId: item.servicePointId || null,
+    isRequired: item.isRequired ?? true
   }));
 
-  let { data, error } = await supabase.rpc("upsert_rating_criteria_bulk", {
+  const { data, error } = await supabase.rpc("upsert_rating_criteria_bulk", {
     p_criteria_list: formattedList,
   });
 
   if (error) console.error(error);
-  else console.log(data);
+  else console.log(`returned criteria picked: ${data}`);
+  
   return data
 };
 
@@ -57,8 +56,8 @@ export const createServicePoint_RatingCriteria = async (hybridData) => {
   const { data, error } = await supabase
     .from('ServicePointRatingCriteria')
     .upsert(hybridData, {
-      onConflict: ['service_point_id', 'rating_criteria_id'], // Specify the unique constraint columns
-      ignoreDuplicates: true, // Skip duplicate insertions without updating
+      onConflict: ['service_point_id', 'rating_criteria_id'],
+      ignoreDuplicates: true,
     })
     .select();
 

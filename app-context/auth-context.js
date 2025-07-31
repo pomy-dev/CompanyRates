@@ -63,7 +63,11 @@ export function AuthProvider({ children }) {
 
             if (!insertedServicePoint) return;
 
+            console.log(`awaited service point Id: ${insertedServicePoint?.id}`)
+
             const ratingCriterions = await createRatingCriteria(allRatingCriteria);
+
+            if (ratingCriterions?.length <= 0) return;
 
             ratingCriterions.forEach(async criterion => {
               const servicePoint_ratingCriteria = {
@@ -73,13 +77,8 @@ export function AuthProvider({ children }) {
               };
 
               const servicePointRatingCriteriaHybrid = await createServicePoint_RatingCriteria(servicePoint_ratingCriteria);
-              console.log(servicePointRatingCriteriaHybrid)
-
+              console.log(`Hybrid Data:${servicePointRatingCriteriaHybrid}`)
             });
-
-            console.log('Inserted Service Points:', data);
-
-            return data;
 
           } catch (error) {
             console.error('Error in service points:', error);

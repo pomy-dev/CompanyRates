@@ -22,7 +22,7 @@ import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, T
 import { Pie, Bar } from 'react-chartjs-2';
 import BranchModal from './BranchModal';
 import { mockBranches } from '../../../utils/data';
-import { insertNewBranch } from '../../../services/ratingService';
+import { insertNewBranch } from '../../../services/companyService';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
