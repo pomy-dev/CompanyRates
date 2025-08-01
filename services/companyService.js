@@ -80,8 +80,6 @@ export const getServicePointCriteria = async (servicePointId) => {
     throw servicePointError;
   }
 
-  
-
   return servicePoint;
 };
 
