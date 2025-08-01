@@ -37,8 +37,9 @@ function RegistrationForm({ onRegister, onBack }) {
   let [loading, setLoading] = useState(false);
   let { registerCompany } = useAuth();
 
-  function formatCompanyInput(input) {
+  function formatCompanyInput(C_id, input) {
     return {
+      companyId: C_id,
       company_name: input.company_name,
       location: input.location,
       industry: input.industry,
@@ -68,104 +69,6 @@ function RegistrationForm({ onRegister, onBack }) {
     if (error) console.error(error);
     else console.log(data);
   };
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   setLoading(true);
-
-  //   if (formData.password !== formData.confirmPassword) {
-  //     alert("Passwords do not match");
-  //     setLoading(false);
-  //     return;
-  //   }
-
-  //   let publicUrl = "";
-  //   if (formData.logoFile) {
-  //     // Generate a unique file name (e.g., using timestamp or UUID)
-  //     const fileName = `company_logo_${Date.now()}.${formData.logoFile.name
-  //       .split(".")
-  //       .pop()}`;
-  //     publicUrl = await uploadFileToStorage(
-  //       `images/${fileName}`,
-  //       formData.logoFile
-  //     );
-  //     if (!publicUrl) {
-  //       alert("Failed to upload logo");
-  //       setLoading(false);
-  //       return;
-  //     }
-  //   }
-
-  //   const companyData = {
-  //     ...formData,
-  //     logoUrl: publicUrl, // Use the public URL from Supabase
-  //     servicePoints: servicePoints.map((sp, index) => ({
-  //       ...sp,
-  //       id: `sp${index + 1}`,
-  //       ratingCriteria: sp.ratingCriteria.map((rc, rcIndex) => ({
-  //         ...rc,
-  //         id: `rc${index + 1}-${rcIndex + 1}`,
-  //       })),
-  //     })),
-  //   };
-
-  //   try {
-  //     // const { data, error } = await supabase.auth.signUp({
-  //     //   email: formData.contactEmail,
-  //     //   password: formData.password,
-  //     // });
-
-  //     // if (error) throw error;
-
-  //     // await registerCompany({
-  //     //   data,
-  //     //   ...companyData,
-  //     // });
-
-  //     // const allRatingCriteria = companyData.servicePoints.flatMap(
-  //     //   (sp) => sp.ratingCriteria
-  //     // );
-  //     // console.log(allRatingCriteria);
-
-  //     // createRatingCriteria(allRatingCriteria);
-
-  //     createCompany(formatCompanyInput(companyData));
-
-  //     setLoading(false);
-  //     alert("Your Company Has been uploaded successfully.");
-
-  //     // Store company logo URL in localStorage
-  //     localStorage.setItem("companyLogo", publicUrl);
-  //     console.log(companyData);
-
-  //     // Reset all fields and go back to step one
-  //     setShowModal(false);
-  //     setExpandedServicePoints({});
-  //     setTempRatingCriteria({ title: "", isRequired: false });
-  //     setTempServicePoint({
-  //       name: "",
-  //       department: "",
-  //       isActive: true,
-  //       ratingCriteria: [],
-  //     });
-  //     setServicePoints([]);
-  //     setFormData({
-  //       company_name: "",
-  //       location: "",
-  //       password: "",
-  //       confirmPassword: "",
-  //       industry: "",
-  //       contactEmail: "",
-  //       contactPhone: "",
-  //       logoFile: null,
-  //     });
-  //     setLogoPreviewUrl("");
-  //     setCurrentStep(1);
-  //   } catch (error) {
-  //     setLoading(false);
-  //     alert(error.message);
-  //   }
-  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -215,16 +118,15 @@ function RegistrationForm({ onRegister, onBack }) {
 
       if (error) throw error;
 
-      await registerCompany({
-        data,
-        ...companyData,
-      });
+      const C_id = data?.user?.id;
+      createCompany(formatCompanyInput(C_id, companyData));
 
       setLoading(false);
       alert("Your Company Has been uploaded successfully.");
 
       // Store company logo URL in localStorage
       localStorage.setItem("companyLogo", publicUrl);
+      console.log(companyData);
 
       // Reset all fields and go back to step one
       setShowModal(false);
@@ -254,6 +156,94 @@ function RegistrationForm({ onRegister, onBack }) {
       alert(error.message);
     }
   };
+
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setLoading(true);
+
+  //   if (formData.password !== formData.confirmPassword) {
+  //     alert("Passwords do not match");
+  //     setLoading(false);
+  //     return;
+  //   }
+
+  //   let publicUrl = "";
+  //   if (formData.logoFile) {
+  //     // Generate a unique file name (e.g., using timestamp or UUID)
+  //     const fileName = `company_logo_${Date.now()}.${formData.logoFile.name
+  //       .split(".")
+  //       .pop()}`;
+  //     publicUrl = await uploadFileToStorage(
+  //       `images/${fileName}`,
+  //       formData.logoFile
+  //     );
+  //     if (!publicUrl) {
+  //       alert("Failed to upload logo");
+  //       setLoading(false);
+  //       return;
+  //     }
+  //   }
+
+  //   const companyData = {
+  //     ...formData,
+  //     logoUrl: publicUrl, // Use the public URL from Supabase
+  //     servicePoints: servicePoints.map((sp, index) => ({
+  //       ...sp,
+  //       id: `sp${index + 1}`,
+  //       ratingCriteria: sp.ratingCriteria.map((rc, rcIndex) => ({
+  //         ...rc,
+  //         id: `rc${index + 1}-${rcIndex + 1}`,
+  //       })),
+  //     })),
+  //   };
+
+  //   try {
+  //     const { data, error } = await supabase.auth.signUp({
+  //       email: formData.contactEmail,
+  //       password: formData.password,
+  //     });
+
+  //     if (error) throw error;
+
+  //     await registerCompany({
+  //       data,
+  //       ...companyData,
+  //     });
+
+  //     setLoading(false);
+  //     alert("Your Company Has been uploaded successfully.");
+
+  //     // Store company logo URL in localStorage
+  //     localStorage.setItem("companyLogo", publicUrl);
+
+  //     // Reset all fields and go back to step one
+  //     setShowModal(false);
+  //     setExpandedServicePoints({});
+  //     setTempRatingCriteria({ title: "", isRequired: false });
+  //     setTempServicePoint({
+  //       name: "",
+  //       department: "",
+  //       isActive: true,
+  //       ratingCriteria: [],
+  //     });
+  //     setServicePoints([]);
+  //     setFormData({
+  //       company_name: "",
+  //       location: "",
+  //       password: "",
+  //       confirmPassword: "",
+  //       industry: "",
+  //       contactEmail: "",
+  //       contactPhone: "",
+  //       logoFile: null,
+  //     });
+  //     setLogoPreviewUrl("");
+  //     setCurrentStep(1);
+  //   } catch (error) {
+  //     setLoading(false);
+  //     alert(error.message);
+  //   }
+  // };
 
   const handleLogoUpload = (e) => {
     const file = e.target.files?.[0];

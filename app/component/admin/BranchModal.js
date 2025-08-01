@@ -19,6 +19,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
   const [errors, setErrors] = useState({});
   const [isCriteriaOpen, setIsCriteriaOpen] = useState(false);
   const [selectedServicePoint, setSelectedServicePoint] = useState('');
+  const [criteria, setCriteria] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
@@ -37,17 +38,21 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
     const isAlreadySelected = formData?.servicePoints?.some(sp => sp?.name === servicePoint?.name);
 
     if (isAlreadySelected) {
+
       setFormData((prev) => ({
         ...prev,
         servicePoints: prev.servicePoints.filter(sp => sp.name !== servicePoint.name),
       }));
+
     } else {
+
       setFormData((prev) => ({
         ...prev,
         servicePoints: [...prev.servicePoints, { name: servicePoint.name, criteria: [] }],
       }));
 
       setSelectedServicePoint(servicePoint?.name);
+      setCriteria(servicePoint?.ratingCriteria);
       setIsCriteriaOpen(true);
     }
   };
@@ -372,7 +377,9 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
         }}
         onSave={handleSaveCriteria}
         selectedServicePoint={selectedServicePoint}
+        criteriaList={criteria}
       />
+      
     </div>
   );
 };

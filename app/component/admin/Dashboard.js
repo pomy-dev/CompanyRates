@@ -84,6 +84,7 @@ function Dashboard() {
         };
 
         setCompanyData(formattedData);
+
       } catch (err) {
         setError(err.message);
       }
@@ -371,7 +372,7 @@ function Dashboard() {
   const mockServicePoints = companyData?.servicePoints?.map(point => {
     const service = point?.name;
     return service;
-  }) || []
+  }) || [];
 
   // const displayedServicePoints =
   //   selectedBranchId
@@ -379,6 +380,7 @@ function Dashboard() {
   //     : companyData?.servicePoints || [];
 
   // Mock data for ratings bar chart
+
   const ratingsBarData = {
     labels: mockServicePoints,
     datasets: [{
@@ -409,6 +411,10 @@ function Dashboard() {
     }],
   };
 
+  const getServicePointCriteria = () => { 
+    
+  }
+
   const handleSwitchBranch = (branch) => {
     // setBranches(branch)
   }
@@ -436,10 +442,9 @@ function Dashboard() {
       }))
     };
 
-    console.log(newBranch);
-
     try {
       const insertedBranch = await insertNewBranch(newBranch);
+      console.log(`New Branch: ${insertedBranch}`);
     } catch (error) {
       setError(error)
     }

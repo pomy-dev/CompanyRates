@@ -48,7 +48,7 @@ export const createRatingCriteria = async (criteriaList) => {
 
   if (error) console.error(error);
   else console.log(`returned criteria picked: ${data}`);
-  
+
   return data
 };
 
@@ -67,6 +67,22 @@ export const createServicePoint_RatingCriteria = async (hybridData) => {
   }
 
   return data;
+};
+
+export const getServicePointCriteria = async (servicePointId) => {
+  const { data: servicePoint, error: servicePointError } = await supabase
+    .from('CompanyServicePoints')
+    .select('*')
+    .eq('id', servicePointId);
+
+  if (servicePointError) {
+    console.error('Error finding service point request:', servicePointError.message);
+    throw servicePointError;
+  }
+
+  
+
+  return servicePoint;
 };
 
 /**
@@ -89,19 +105,19 @@ export const createServicePoint_RatingCriteria = async (hybridData) => {
 export const insertNewBranch = async (branchData) => {
   const { data, error } = await supabase
     .from('Branches')
-    .insert(
-      {
-        company_id: branchData?.companyId,
-        branch_name: branchData?.branchName,
-        branch_code: branchData?.branchCode,
-        branch_type: branchData?.branchType,
-        location: branchData?.location,
-        address: branchData?.address,
-        contact_phone: branchData?.contactPhone,
-        contact_email: branchData?.contactEmail,
-        manager_name: branchData?.manager,
-        is_active: branchData?.isActive
-      }).select();
+    .insert({
+      company_id: branchData?.companyId,
+      branch_name: branchData?.branchName,
+      branch_code: branchData?.branchCode,
+      branch_type: branchData?.branchType,
+      location: branchData?.location,
+      address: branchData?.address,
+      contact_phone: branchData?.contactPhone,
+      contact_email: branchData?.contactEmail,
+      manager_name: branchData?.manager,
+      is_active: branchData?.isActive
+    })
+    .select();
 
   if (error) {
     console.error('Error inserting into branches table:', error);
