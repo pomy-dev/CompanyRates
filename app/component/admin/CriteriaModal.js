@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 
-const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint, criteriaList = [] }) => {
+const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint }) => {
   const [selectedCriteriaList, setSelectedCriteriaList] = useState([]);
   const [newCriteria, setNewCriteria] = useState({ criteria: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [errors, setErrors] = useState({});
 
   // Filter criteriaList based on search term
-  const filteredCriteria = criteriaList.filter((item) =>
-    item.criteria.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCriteria = selectedServicePoint?.ServicePointRatingCriteria?.filter((criteria) =>
+    criteria?.RatingCriteria?.title?.toLowerCase()?.includes(searchTerm?.toLowerCase())
   );
 
   const handleInputChange = (e) => {
@@ -80,7 +80,7 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint, criteria
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Add Criteria for {selectedServicePoint} [{selectedCriteriaList?.length}]</h2>
+              <h2 className="text-xl font-bold text-gray-900">Add Criteria for {selectedServicePoint?.servicepoint} [{selectedCriteriaList?.length}]</h2>
             </div>
             <button
               onClick={handleClose}
@@ -101,7 +101,7 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint, criteria
                     ? 'bg-blue-200'
                     : 'bg-slate-200'
                   } text-gray-700 px-2 py-1 m-1 transition-all duration-300`}>
-                  {criteria?.criteria}
+                  {criteria?.RatingCriteria?.title}
                   <button key={index} type="button"
                     onClick={() => handleRemove(index)} className='opacity-0 group-hover:opacity-100 transform group-hover:scale-100 scale-90 transition-all duration-300 ease-in-out ml-4 rounded-full bg-red-400 hover:bg-red-600'>
                     <X className='h-5 w-5' />
@@ -113,7 +113,7 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint, criteria
             {/* Add Criteria */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Add Criteria for {selectedServicePoint}
+                Add Criteria for {selectedServicePoint?.servicepoint}
               </label>
 
               <div className="relative flex flex-col space-y-2">
@@ -136,7 +136,7 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint, criteria
                           onClick={() => handleSelectCriteria(item)}
                           className="border border-gray-200 rounded-lg px-4 py-2 hover:bg-blue-100 cursor-pointer text-sm text-gray-700"
                         >
-                          {item.criteria}
+                          {item?.RatingCriteria?.title}
                         </div>
                       ))
                     ) : (
@@ -147,14 +147,6 @@ const CriteriaModal = ({ isOpen, onClose, onSave, selectedServicePoint, criteria
                     )}
                   </div>
                 )}
-
-                <button
-                  type="button"
-                  onClick={handleAddCriteria}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-                >
-                  Add Criteria
-                </button>
               </div>
               {errors.criteria && <p className="text-red-600 text-sm mt-1">{errors.criteria}</p>}
             </div>

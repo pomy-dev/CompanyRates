@@ -69,18 +69,31 @@ export const createServicePoint_RatingCriteria = async (hybridData) => {
   return data;
 };
 
-export const getServicePointCriteria = async (servicePointId) => {
-  const { data: servicePoint, error: servicePointError } = await supabase
-    .from('CompanyServicePoints')
-    .select('*')
-    .eq('id', servicePointId);
+export const getCompanyServicePointCriteria = async (companyId) => {
+  const { data, error } = await supabase
+    .from('Companies')
+    .select(`
+    *,
+    CompanyServicePoints (
+      *,
+      ServicePointRatingCriteria (
+        RatingCriteria:rating_criteria_id (
+          id,
+          title
+        )
+      )
+    )
+  `)
+    .eq('id', companyId)
+    .single()
 
-  if (servicePointError) {
+
+  if (error) {
     console.error('Error finding service point request:', servicePointError.message);
     throw servicePointError;
   }
 
-  return servicePoint;
+  return data;
 };
 
 /**

@@ -22,7 +22,7 @@ import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, T
 import { Pie, Bar } from 'react-chartjs-2';
 import BranchModal from './BranchModal';
 import { mockBranches } from '../../../utils/data';
-import { insertNewBranch } from '../../../services/companyService';
+import { insertNewBranch, getCompanyServicePointCriteria } from '../../../services/companyService';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -54,36 +54,18 @@ function Dashboard() {
         const companyId = user?.id;
 
         // Fetch company data
-        const { data: companyData, error: companyError } = await supabase
-          .from('Companies')
-          .select('*')
-          .eq('id', companyId)
-          .single();
+        const retrievedCompanyData = await getCompanyServicePointCriteria(companyId);
 
-        if (companyError) throw companyError;
-
-        // Fetch service points with ratings and comments
-        const { data: servicePoints, error: servicePointsError } = await supabase
-          .from('CompanyServicePoints')
-          .select('*')
-          .eq('company_id', companyId);
-
-        if (servicePointsError) throw servicePointsError;
+        if (!retrievedCompanyData) return;
 
         // Structure data to match original component expectations
 
-        const formattedData = {
-          ...companyData,
-          servicePoints: servicePoints?.map(sp => ({
-            id: sp.id,
-            name: sp.servicepoint,
-            department: sp.department,
-            isActive: sp.is_active || true,
-            ratingCriteria: sp.ratingCriteria || [],
-          })),
-        };
+        // const formattedData = {
+        //   ...retrievedCompanyData
+        // };
 
-        setCompanyData(formattedData);
+        setCompanyData(retrievedCompanyData);
+        console.log(retrievedCompanyData)
 
       } catch (err) {
         setError(err.message);
@@ -252,7 +234,7 @@ function Dashboard() {
     console.log(companyData);
   };
 
-  const activeServicePoints = companyData?.servicePoints?.filter(sp => sp.isActive).length || 0;
+  const activeServicePoints = companyData?.CompanyServicePoints?.filter(sp => sp.isActive).length || 0;
 
   const totalComments = Array.isArray(comments)
     ? comments.filter(
@@ -369,8 +351,8 @@ function Dashboard() {
   };
 
   // Mock data for service points
-  const mockServicePoints = companyData?.servicePoints?.map(point => {
-    const service = point?.name;
+  const retrievedServicePoints = companyData?.CompanyServicePoints?.map(servicePoint => {
+    const service = servicePoint?.servicepoint;
     return service;
   }) || [];
 
@@ -382,10 +364,10 @@ function Dashboard() {
   // Mock data for ratings bar chart
 
   const ratingsBarData = {
-    labels: mockServicePoints,
+    labels: retrievedServicePoints,
     datasets: [{
       label: 'Number of Ratings',
-      data: mockServicePoints.map(servicePoint =>
+      data: retrievedServicePoints.map(servicePoint =>
         ratings.filter(rating => rating.service_point === servicePoint).length
       ),
       backgroundColor: '#3B82F6',
@@ -396,10 +378,10 @@ function Dashboard() {
 
   // Mock data for comments bar chart
   const commentsBarData = {
-    labels: mockServicePoints,
+    labels: retrievedServicePoints,
     datasets: [{
       label: 'Number of Comments',
-      data: mockServicePoints.map(servicePoint =>
+      data: retrievedServicePoints.map(servicePoint =>
         comments.filter(comment => {
           const rating = ratings.find(r => r.id === comment.rating_id);
           return rating && rating.service_point === servicePoint;
@@ -410,10 +392,6 @@ function Dashboard() {
       borderWidth: 1,
     }],
   };
-
-  const getServicePointCriteria = () => { 
-    
-  }
 
   const handleSwitchBranch = (branch) => {
     // setBranches(branch)
@@ -1034,7 +1012,7 @@ function Dashboard() {
         isOpen={showBranchModal}
         onClose={() => { setShowBranchModal(false) }}
         onSave={handleSaveBranch}
-        servicePoints={companyData?.servicePoints}
+        servicePoints={companyData?.CompanyServicePoints}
       />
 
     </div>
