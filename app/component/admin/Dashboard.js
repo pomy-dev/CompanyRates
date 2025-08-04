@@ -411,11 +411,11 @@ function Dashboard() {
       manager: formData.manager,
       isActive: formData.isActive,
       servicePoints: formData.servicePoints?.map(sp => ({
-        servicePoint: sp.name,
+        servicePointId: sp.servicePointId,
+        servicePointName: sp.servicePointName,
         criteria: sp.criteria.map(c => ({
           id: c?.id,
-          title: c?.title,
-          priority: c.priority,
+          title: c?.title
         })),
       }))
     };
