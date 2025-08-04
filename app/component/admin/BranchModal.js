@@ -23,7 +23,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
-    
+
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? e.target.checked : value,
@@ -109,11 +109,14 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
           servicePoints: formData.servicePoints?.map(sp => ({
             name: sp.name,
             criteria: sp.criteria.map(c => ({
-              title: c.criteria,
-              priority: c.priority,
+              id: c.id,
+              title: c.title,
             })),
           })),
         };
+
+        console.log('From Branch Modal')
+        console.log(formattedData)
 
         onSave(formattedData);
 
