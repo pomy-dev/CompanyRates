@@ -14,16 +14,16 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
     contactPhone: '',
     manager: '',
     isActive: true,
-    servicePoints: [],
+    servicePoints: []
   });
   const [errors, setErrors] = useState({});
   const [isCriteriaOpen, setIsCriteriaOpen] = useState(false);
   const [selectedServicePoint, setSelectedServicePoint] = useState('');
-  const [criteria, setCriteria] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
+    
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? e.target.checked : value,
@@ -52,7 +52,6 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
       }));
 
       setSelectedServicePoint(servicePoint);
-      // setCriteria(servicePoint);
       setIsCriteriaOpen(true);
     }
   };
@@ -377,7 +376,6 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
         }}
         onSave={handleSaveCriteria}
         selectedServicePoint={selectedServicePoint}
-        criteriaList={criteria}
       />
 
     </div>

@@ -414,15 +414,16 @@ function Dashboard() {
       servicePoints: formData.servicePoints?.map(sp => ({
         servicePoint: sp.name,
         criteria: sp.criteria.map(c => ({
-          title: c.title,
+          id: c?.id,
+          title: c?.title,
           priority: c.priority,
         })),
       }))
     };
 
     try {
-      const insertedBranch = await insertNewBranch(newBranch);
-      console.log(`New Branch: ${insertedBranch}`);
+      // const insertedBranch = await insertNewBranch(newBranch);
+      console.log(`New Branch: ${newBranch.servicePoints}`);
     } catch (error) {
       setError(error)
     }
