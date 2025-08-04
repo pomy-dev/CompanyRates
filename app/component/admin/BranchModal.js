@@ -14,7 +14,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
     contactPhone: '',
     manager: '',
     isActive: true,
-    servicePoints: [],
+    servicePoints: []
   });
   const [errors, setErrors] = useState({});
   const [isCriteriaOpen, setIsCriteriaOpen] = useState(false);
@@ -23,6 +23,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
+    
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? e.target.checked : value,
@@ -34,20 +35,23 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
   };
 
   const handleServicePointToggle = (servicePoint) => {
-    const isAlreadySelected = formData?.servicePoints?.some(sp => sp?.name === servicePoint?.name);
+    const isAlreadySelected = formData?.servicePoints?.some(sp => sp?.name === servicePoint?.servicepoint);
 
     if (isAlreadySelected) {
+
       setFormData((prev) => ({
         ...prev,
-        servicePoints: prev.servicePoints.filter(sp => sp.name !== servicePoint.name),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        servicePoints: [...prev.servicePoints, { name: servicePoint.name, criteria: [] }],
+        servicePoints: prev.servicePoints.filter(sp => sp.name !== servicePoint?.servicepoint),
       }));
 
-      setSelectedServicePoint(servicePoint?.name);
+    } else {
+
+      setFormData((prev) => ({
+        ...prev,
+        servicePoints: [...prev.servicePoints, { name: servicePoint?.servicepoint, criteria: [] }],
+      }));
+
+      setSelectedServicePoint(servicePoint);
       setIsCriteriaOpen(true);
     }
   };
@@ -56,14 +60,14 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
     if (selectedServicePoint) {
       setFormData((prev) => {
         const updatedServicePoints = prev.servicePoints?.filter(
-          (sp) => sp.name !== selectedServicePoint
+          (sp) => sp.name !== selectedServicePoint?.servicepoint
         );
         return {
           ...prev,
           servicePoints: [
             ...updatedServicePoints,
             {
-              name: selectedServicePoint,
+              name: selectedServicePoint?.servicepoint,
               criteria: criteriaList,
             },
           ],
@@ -316,12 +320,12 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
                     <label key={index} className="flex items-center rounded-full px-4 py-2 m-2 bg-blue-100">
                       <input
                         type="checkbox"
-                        name={service?.name}
-                        checked={formData?.servicePoints.some((sp) => sp?.name === service?.name)}
+                        name={service?.servicepoint}
+                        checked={formData?.servicePoints.some((sp) => sp?.name === service?.servicepoint)}
                         onChange={() => handleServicePointToggle(service)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="ml-2 text-sm font-medium text-gray-700">{service?.name}</span>
+                      <span className="ml-2 text-sm font-medium text-gray-700">{service?.servicepoint}</span>
                     </label>
                   ))}
                 </div>
@@ -373,6 +377,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
         onSave={handleSaveCriteria}
         selectedServicePoint={selectedServicePoint}
       />
+
     </div>
   );
 };
