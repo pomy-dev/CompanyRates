@@ -48,7 +48,9 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
 
       setFormData((prev) => ({
         ...prev,
-        servicePoints: [...prev.servicePoints, { name: servicePoint?.servicepoint, criteria: [] }],
+        servicePoints: [...prev.servicePoints, { 
+          id:servicePoint?.id,
+          name: servicePoint?.servicepoint, criteria: [] }],
       }));
 
       setSelectedServicePoint(servicePoint);
@@ -67,6 +69,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
           servicePoints: [
             ...updatedServicePoints,
             {
+              id:selectedServicePoint?.id,
               name: selectedServicePoint?.servicepoint,
               criteria: criteriaList,
             },
