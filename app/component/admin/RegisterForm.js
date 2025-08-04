@@ -37,22 +37,48 @@ function RegistrationForm({ onRegister, onBack }) {
   let { registerCompany } = useAuth();
 
   //create rating critea using supabase emthods :
-  const createRatingCriteria = async (criteriaList) => {
+function formatCompanyInput(C_id, input) {
+  return {
+    companyId: C_id,
+    company_name: input.company_name,
+    location: input.location,
+    password: '123456', // Default password
+    confirmPassword: '123456', // Matching default password
+    industry: input.industry,
+    contactEmail: input.contactEmail,
+    contactPhone: input.contactPhone,
+    logoUrl: input.logoUrl,
+    servicePoints: input.servicePoints.map(sp => ({
+      name: sp.name,
+      department: sp.department,
+      isActive: sp.isActive,
+      
+      ratingCriteria: sp.ratingCriteria.map(rc => ({
+        title: rc.title,
+        isRequired: rc.isRequired,
+      }))
+    }))
+  };
+}
+
+
+  const createCompany1 = async (p_input) => {
     // Ensure the input is a valid JSONB array
-    const formattedList = criteriaList.map((item) => ({
-      title: item.title || null,
-      isRequired: item.isRequired ?? true,
-      companyId: item.companyId || null,
-      servicePointId: item.servicePointId || null,
-    }));
 
-    let { data, error } = await supabase.rpc("upsert_rating_criteria_bulk", {
-      p_criteria_list: formattedList,
-    });
-
+    let { data, error } = await supabase.rpc(
+      "create_company_with_service_points_and_rating_criteria",
+      {
+        p_input,
+      }
+    );
     if (error) console.error(error);
     else console.log(data);
   };
+
+
+
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -102,18 +128,12 @@ function RegistrationForm({ onRegister, onBack }) {
 
       if (error) throw error;
 
-      await registerCompany({
-        data,
-        ...companyData,
-      });
-
-   
-      const allRatingCriteria = companyData.servicePoints.flatMap(
-        (sp) => sp.ratingCriteria
-      );
-      console.log(allRatingCriteria);
-
-      createRatingCriteria(allRatingCriteria);
+    
+      const C_id = data?.user?.id;
+      
+      createCompany1(formatCompanyInput(C_id,companyData));
+ 
+      
 
       setLoading(false);
       alert("Your Company Has been uploaded successfully.");
