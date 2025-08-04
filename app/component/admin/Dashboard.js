@@ -45,7 +45,6 @@ function Dashboard() {
   const [branches, setBranches] = useState(mockBranches);
   const [showBranchModal, setShowBranchModal] = useState(false);
 
-  // Fetch company and service points data from Supabase
   useEffect(() => {
     if (!user) return;
 
@@ -423,7 +422,8 @@ function Dashboard() {
 
     try {
       // const insertedBranch = await insertNewBranch(newBranch);
-      console.log(`New Branch: ${newBranch.servicePoints}`);
+      console.log('Branch from Dashboard');
+      console.log(newBranch)
     } catch (error) {
       setError(error)
     }
