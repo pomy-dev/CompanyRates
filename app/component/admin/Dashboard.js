@@ -518,8 +518,7 @@ function Dashboard() {
         servicePoint: sp.name,
         criteria: sp.criteria.map((c) => ({
           id: c?.id,
-          title: c?.title,
-          priority: c.priority,
+          title: c?.title
         })),
       })),
     };

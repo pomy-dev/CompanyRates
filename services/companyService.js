@@ -114,8 +114,25 @@ export const getCompanyServicePointCriteria = async (companyId) => {
  * @returns {Promise<Object>} - The result of the insert operation, including data or error.
  */
 export const insertNewBranch = async (branchData) => {
+  // const { data, error } = await supabase
+  //   .from('Branches')
+  //   .insert({
+  //     company_id: branchData?.companyId,
+  //     branch_name: branchData?.branchName,
+  //     branch_code: branchData?.branchCode,
+  //     branch_type: branchData?.branchType,
+  //     location: branchData?.location,
+  //     address: branchData?.address,
+  //     contact_phone: branchData?.contactPhone,
+  //     contact_email: branchData?.contactEmail,
+  //     manager_name: branchData?.manager,
+  //     is_active: branchData?.isActive
+  //   })
+  //   .select();
   const { data, error } = await supabase
-    .from('Branches')
+    .rpc('create_branch_with_service_points',{
+      // jsonb_build_object()
+    })
     .insert({
       company_id: branchData?.companyId,
       branch_name: branchData?.branchName,
@@ -128,7 +145,6 @@ export const insertNewBranch = async (branchData) => {
       manager_name: branchData?.manager,
       is_active: branchData?.isActive
     })
-    .select();
 
   if (error) {
     console.error('Error inserting into branches table:', error);
