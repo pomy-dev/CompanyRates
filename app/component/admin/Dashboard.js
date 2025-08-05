@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../../services/supabaseService';
-import { getAllUsersByCompanyId } from '../../../services/ratingService';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../../services/supabaseService";
+import { getAllUsersByCompanyId } from "../../../services/ratingService";
 import {
   Building2,
   LogOut,
@@ -15,21 +15,39 @@ import {
   MapPin,
   Plus,
   Search,
-  ChevronDown
-} from 'lucide-react';
-import { useAuth } from '../../../app-context/auth-context';
-import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
-import BranchModal from './BranchModal';
-import { mockBranches } from '../../../utils/data';
-import { insertNewBranch, getCompanyServicePointCriteria } from '../../../services/companyService';
+  ChevronDown,
+} from "lucide-react";
+import { useAuth } from "../../../app-context/auth-context";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Pie, Bar } from "react-chartjs-2";
+import BranchModal from "./BranchModal";
+import { mockBranches } from "../../../utils/data";
+import {
+  insertNewBranch,
+  getCompanyServicePointCriteria,
+} from "../../../services/companyService";
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+ChartJS.register(
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
+);
 
 function Dashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState("overview");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [companyData, setCompanyData] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [comments, setComments] = useState([]);
@@ -41,7 +59,13 @@ function Dashboard() {
   const [suggestions, setSuggestions] = useState([]);
   const { user, loading: authLoading } = useAuth();
   const [recentComments, setRecentComments] = useState([]);
-  const [distribution, setDistribution] = useState({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+  const [distribution, setDistribution] = useState({
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+  });
   const [branches, setBranches] = useState(mockBranches);
   const [showBranchModal, setShowBranchModal] = useState(false);
 
@@ -53,7 +77,9 @@ function Dashboard() {
         const companyId = user?.id;
 
         // Fetch company data
-        const retrievedCompanyData = await getCompanyServicePointCriteria(companyId);
+        const retrievedCompanyData = await getCompanyServicePointCriteria(
+          companyId
+        );
 
         if (!retrievedCompanyData) return;
 
@@ -64,8 +90,7 @@ function Dashboard() {
         // };
 
         setCompanyData(retrievedCompanyData);
-        console.log(retrievedCompanyData)
-
+        console.log(retrievedCompanyData);
       } catch (err) {
         setError(err.message);
       }
@@ -74,9 +99,9 @@ function Dashboard() {
     // Fetch ratings from the ratings table
     async function fetchRatings() {
       const { data, error } = await supabase
-        .from('ratings')
-        .select('*')
-        .eq('company_id', user?.id);
+        .from("ratings")
+        .select("*")
+        .eq("company_id", user?.id);
 
       if (error) {
         setError(error?.message);
@@ -92,21 +117,23 @@ function Dashboard() {
       let totalSum = 0;
       let totalCount = 0;
 
-
       data?.forEach((r) => {
         if (!r?.rating) return;
 
         let ratingObj;
         try {
-          ratingObj = typeof r.rating === 'string' ? JSON.parse(r.rating) : r.rating;
+          ratingObj =
+            typeof r.rating === "string" ? JSON.parse(r.rating) : r.rating;
         } catch (error) {
-          console.warn('Invalid rating JSON:', r.rating);
+          console.warn("Invalid rating JSON:", r.rating);
           return;
         }
 
-        if (!ratingObj || typeof ratingObj !== 'object') return;
+        if (!ratingObj || typeof ratingObj !== "object") return;
 
-        const scores = Object.values(ratingObj).filter(n => typeof n === 'number');
+        const scores = Object.values(ratingObj).filter(
+          (n) => typeof n === "number"
+        );
 
         scores?.forEach((score) => {
           const rounded = Math.round(score);
@@ -115,7 +142,6 @@ function Dashboard() {
           totalCount++;
         });
       });
-
 
       const avg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : 0;
 
@@ -127,9 +153,9 @@ function Dashboard() {
     // Fetch comments from the Feedback table
     async function fetchComments() {
       const { data: ratingsData, error: ratingsError } = await supabase
-        .from('ratings')
-        .select('id, user_id')
-        .eq('company_id', user?.id);
+        .from("ratings")
+        .select("id, user_id")
+        .eq("company_id", user?.id);
 
       if (ratingsError) {
         setError(ratingsError.message);
@@ -137,9 +163,9 @@ function Dashboard() {
       }
 
       const { data, error } = await supabase
-        .from('feedback')
-        .select('*')
-        .eq('company_id', user?.id);
+        .from("feedback")
+        .select("*")
+        .eq("company_id", user?.id);
 
       if (error) {
         setError(error.message);
@@ -147,48 +173,52 @@ function Dashboard() {
       }
 
       const ratingIdToUsername = {};
-      (ratingsData || []).forEach(r => {
+      (ratingsData || []).forEach((r) => {
         ratingIdToUsername[r.id] = {
           username: r.username,
-          phone_number: r.phone_number
-        }
+          phone_number: r.phone_number,
+        };
       });
 
       const groupedComments = data
-        .filter(item => item.comments)
-        .map(item => {
-          const commentObj = typeof item.comments === 'string'
-            ? JSON.parse(item.comments)
-            : item.comments;
+        .filter((item) => item.comments)
+        .map((item) => {
+          const commentObj =
+            typeof item.comments === "string"
+              ? JSON.parse(item.comments)
+              : item.comments;
 
           return {
             id: item.id,
             date: new Date(item.created_at),
-            suggestion: item.suggestion || '',
+            suggestion: item.suggestion || "",
             rating_id: item.rating_id,
-            username: ratingIdToUsername[item.rating_id]?.username || 'Unknown',
-            phone_number: ratingIdToUsername[item.rating_id]?.phone_number || '',
-            categories: Object.entries(commentObj || {}).map(([category, content]) => ({
-              category,
-              content,
-            })),
+            username: ratingIdToUsername[item.rating_id]?.username || "Unknown",
+            phone_number:
+              ratingIdToUsername[item.rating_id]?.phone_number || "",
+            categories: Object.entries(commentObj || {}).map(
+              ([category, content]) => ({
+                category,
+                content,
+              })
+            ),
           };
         })
         .sort((a, b) => b.date - a.date)
         .slice(0, 5);
 
       const groupedSuggestions = data
-        .filter(item => item.suggestions &&
-          item.suggestions.trim() !== '' &&
-          item.rating_id
+        .filter(
+          (item) =>
+            item.suggestions && item.suggestions.trim() !== "" && item.rating_id
         )
-        .map(item => ({
+        .map((item) => ({
           id: item.id,
           date: new Date(item.created_at),
-          suggestion: item.suggestions || '',
+          suggestion: item.suggestions || "",
           rating_id: item.rating_id,
-          username: ratingIdToUsername[item.rating_id]?.username || 'Unknown',
-          phone_number: ratingIdToUsername[item.rating_id]?.phone_number || '',
+          username: ratingIdToUsername[item.rating_id]?.username || "Unknown",
+          phone_number: ratingIdToUsername[item.rating_id]?.phone_number || "",
         }))
         .sort((a, b) => b.date - a.date);
 
@@ -199,16 +229,19 @@ function Dashboard() {
 
     // Fetch all Other data
     async function fetchOtherData() {
-      const { data: otherData, error: otherError } = await supabase.from('other').select('*').eq('company_id', user.id);
+      const { data: otherData, error: otherError } = await supabase
+        .from("other")
+        .select("*")
+        .eq("company_id", user.id);
       if (otherError) {
         setError(otherError.message);
         return;
       }
       // Filter out records where both criteria and comments are empty/null/undefined
       const filteredData = (otherData || []).filter(
-        item =>
-          (item.criteria && item.criteria.toString().trim() !== '') ||
-          (item.comments && item.comments.toString().trim() !== '')
+        (item) =>
+          (item.criteria && item.criteria.toString().trim() !== "") ||
+          (item.comments && item.comments.toString().trim() !== "")
       );
 
       setOtherData(filteredData);
@@ -233,15 +266,16 @@ function Dashboard() {
     console.log(companyData);
   };
 
-  const activeServicePoints = companyData?.CompanyServicePoints?.filter(sp => sp.isActive).length || 0;
+  const activeServicePoints =
+    companyData?.CompanyServicePoints?.filter((sp) => sp.isActive).length || 0;
 
   const totalComments = Array.isArray(comments)
     ? comments.filter(
-      c =>
-        c.comments &&
-        typeof c.comments === 'object' &&
-        Object.keys(c.comments).length > 0
-    ).length
+        (c) =>
+          c.comments &&
+          typeof c.comments === "object" &&
+          Object.keys(c.comments).length > 0
+      ).length
     : 0;
 
   const pendingSuggestions = comments.length || 0;
@@ -249,15 +283,16 @@ function Dashboard() {
   const getFilteredRatings = (data, category, search) => {
     let filtered = data || [];
 
-    if (category !== 'all') {
-      filtered = filtered.filter(item =>
-        item.department?.toLowerCase() === category.toLowerCase() ||
-        item.service_point === category
+    if (category !== "all") {
+      filtered = filtered.filter(
+        (item) =>
+          item.department?.toLowerCase() === category.toLowerCase() ||
+          item.service_point === category
       );
     }
 
     if (search) {
-      filtered = filtered.filter(item =>
+      filtered = filtered.filter((item) =>
         JSON.stringify(item).toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -268,14 +303,14 @@ function Dashboard() {
   const getFilteredFeedback = (data, category, search) => {
     let filtered = data || [];
 
-    if (category !== 'all') {
-      filtered = filtered.filter(item =>
-        getServicePointByRatingId(item.rating_id) === category
+    if (category !== "all") {
+      filtered = filtered.filter(
+        (item) => getServicePointByRatingId(item.rating_id) === category
       );
     }
 
     if (search) {
-      filtered = filtered.filter(item =>
+      filtered = filtered.filter((item) =>
         JSON.stringify(item).toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -287,7 +322,7 @@ function Dashboard() {
     let filtered = data || [];
 
     if (search) {
-      filtered = filtered.filter(item =>
+      filtered = filtered.filter((item) =>
         JSON.stringify(item).toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -296,8 +331,8 @@ function Dashboard() {
   };
 
   const getServicePointByRatingId = (ratingId) => {
-    const rating = ratings.find(r => r.id === ratingId);
-    return rating ? rating.service_point : 'Unknown';
+    const rating = ratings.find((r) => r.id === ratingId);
+    return rating ? rating.service_point : "Unknown";
   };
 
   const renderStars = (rating) => {
@@ -306,7 +341,9 @@ function Dashboard() {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-4 w-4 ${star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+            className={`h-4 w-4 ${
+              star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"
+            }`}
           />
         ))}
         <span className="ml-2 text-sm text-gray-600">{rating.toFixed(1)}</span>
@@ -315,12 +352,12 @@ function Dashboard() {
   };
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'service-points', label: 'Service Points', icon: Target },
-    { id: 'ratings', label: 'Ratings', icon: Star },
-    { id: 'comments', label: 'Comments', icon: MessageSquare },
-    { id: 'user-prefs', label: 'User Prefs', icon: CheckSquare },
-    { id: 'suggestions', label: 'Suggestions', icon: Lightbulb },
+    { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "service-points", label: "Service Points", icon: Target },
+    { id: "ratings", label: "Ratings", icon: Star },
+    { id: "comments", label: "Comments", icon: MessageSquare },
+    { id: "user-prefs", label: "User Prefs", icon: CheckSquare },
+    { id: "suggestions", label: "Suggestions", icon: Lightbulb },
   ];
 
   if (authLoading) {
@@ -332,28 +369,39 @@ function Dashboard() {
   }
   const totalUsers = users?.length || 0;
 
-  const ratingsOnlyCount = users.filter(u => u.user_path === 'rating_only').length;
-  const suggestionsOnlyCount = users.filter(u => u.user_path === 'suggestion_only').length;
-  const bothCount = users.filter(u => u.user_path === 'both').length;
+  const ratingsOnlyCount = users.filter(
+    (u) => u.user_path === "rating_only"
+  ).length;
+  const suggestionsOnlyCount = users.filter(
+    (u) => u.user_path === "suggestion_only"
+  ).length;
+  const bothCount = users.filter((u) => u.user_path === "both").length;
 
-  const ratingO = totalUsers ? Math.round((ratingsOnlyCount / totalUsers) * 100) : 0;
-  const suggO = totalUsers ? Math.round((suggestionsOnlyCount / totalUsers) * 100) : 0;
+  const ratingO = totalUsers
+    ? Math.round((ratingsOnlyCount / totalUsers) * 100)
+    : 0;
+  const suggO = totalUsers
+    ? Math.round((suggestionsOnlyCount / totalUsers) * 100)
+    : 0;
   const both = totalUsers ? Math.round((bothCount / totalUsers) * 100) : 0;
 
   const pieChartData = {
-    labels: ['Rated Only', 'Suggested Only', 'Both Rated & Suggested'],
-    datasets: [{
-      data: [ratingO, suggO, both],
-      backgroundColor: ['#3B82F6', '#10B981', '#F59E0B'],
-      hoverBackgroundColor: ['#2563EB', '#059669', '#D97706'],
-    }],
+    labels: ["Rated Only", "Suggested Only", "Both Rated & Suggested"],
+    datasets: [
+      {
+        data: [ratingO, suggO, both],
+        backgroundColor: ["#3B82F6", "#10B981", "#F59E0B"],
+        hoverBackgroundColor: ["#2563EB", "#059669", "#D97706"],
+      },
+    ],
   };
 
   // Mock data for service points
-  const retrievedServicePoints = companyData?.CompanyServicePoints?.map(servicePoint => {
-    const service = servicePoint?.servicepoint;
-    return service;
-  }) || [];
+  const retrievedServicePoints =
+    companyData?.CompanyServicePoints?.map((servicePoint) => {
+      const service = servicePoint?.servicepoint;
+      return service;
+    }) || [];
 
   // const displayedServicePoints =
   //   selectedBranchId
@@ -364,42 +412,98 @@ function Dashboard() {
 
   const ratingsBarData = {
     labels: retrievedServicePoints,
-    datasets: [{
-      label: 'Number of Ratings',
-      data: retrievedServicePoints.map(servicePoint =>
-        ratings.filter(rating => rating.service_point === servicePoint).length
-      ),
-      backgroundColor: '#3B82F6',
-      borderColor: '#2563EB',
-      borderWidth: 1,
-    }],
+    datasets: [
+      {
+        label: "Number of Ratings",
+        data: retrievedServicePoints.map(
+          (servicePoint) =>
+            ratings.filter((rating) => rating.service_point === servicePoint)
+              .length
+        ),
+        backgroundColor: "#3B82F6",
+        borderColor: "#2563EB",
+        borderWidth: 1,
+      },
+    ],
   };
 
   // Mock data for comments bar chart
   const commentsBarData = {
     labels: retrievedServicePoints,
-    datasets: [{
-      label: 'Number of Comments',
-      data: retrievedServicePoints.map(servicePoint =>
-        comments.filter(comment => {
-          const rating = ratings.find(r => r.id === comment.rating_id);
-          return rating && rating.service_point === servicePoint;
-        }).length
-      ),
-      backgroundColor: '#10B981',
-      borderColor: '#059669',
-      borderWidth: 1,
-    }],
+    datasets: [
+      {
+        label: "Number of Comments",
+        data: retrievedServicePoints.map(
+          (servicePoint) =>
+            comments.filter((comment) => {
+              const rating = ratings.find((r) => r.id === comment.rating_id);
+              return rating && rating.service_point === servicePoint;
+            }).length
+        ),
+        backgroundColor: "#10B981",
+        borderColor: "#059669",
+        borderWidth: 1,
+      },
+    ],
   };
 
   const handleSwitchBranch = (branch) => {
     // setBranches(branch)
-  }
+  };
 
-  const handleSaveBranch = async (formData) => {
-    const companyId = localStorage.getItem('company_id')
+ const handleSaveBranch = async (formData) => {
+  const companyId = localStorage.getItem("company_id");
+  
+  const formatBranchInput = (formData, companyId) => {
+    return {
+      company_id: companyId?.trim(),
+      branch_name: formData.branchName,
+      branch_code: formData.branchCode,
+      location: formData.location,
+      address: formData.address,
+      contact_phone: formData.contactPhone,
+      contact_email: formData.contactEmail,
+      manager_name: formData.manager,
+      branch_type: formData.branchType,
+      service_points: formData.servicePoints
+        ?.map((sp) =>
+          sp.criteria.map((c) => ({
+            service_point_id: sp.id, 
+            rating_criteria_id: c.id,
+          }))
+        )
+        .flat(), // Flatten the nested arrays
+    };
+  };
+
+  try {
+    // Validate inputs
+    if (!companyId) {
+      throw new Error('Company ID is required');
+    }
+
+    // Format the input for the RPC
+    const branchInput = formatBranchInput(formData, companyId);
+
+    // Log the input for debugging
+    console.log('Branch Input for RPC:', branchInput);
+
+    // Use the formatted input in the RPC call
+    const { data, error } = await supabase.rpc(
+      "create_branch_with_service_points", 
+      { p_input: branchInput }
+    );
+
+    // Check for errors
+    if (error) {
+      console.error('Supabase RPC Error:', error.message);
+      setError(error);
+      return;
+    }
+
+    // If successful, update local state
     const newBranch = {
-      id: Date.now(),
+      id: data, // Assuming the RPC returns the new branch ID
       companyId: companyId?.trim(),
       branchName: formData.branchName,
       branchCode: formData.branchCode,
@@ -410,27 +514,24 @@ function Dashboard() {
       contactPhone: formData.contactPhone,
       manager: formData.manager,
       isActive: formData.isActive,
-      servicePoints: formData.servicePoints?.map(sp => ({
-        servicePointId: sp.servicePointId,
-        servicePointName: sp.servicePointName,
-        criteria: sp.criteria.map(c => ({
+      servicePoints: formData.servicePoints?.map((sp) => ({
+        servicePoint: sp.name,
+        criteria: sp.criteria.map((c) => ({
           id: c?.id,
           title: c?.title
         })),
-      }))
+      })),
     };
 
-    try {
-      // const insertedBranch = await insertNewBranch(newBranch);
-      console.log('Branch from Dashboard');
-      console.log(newBranch)
-    } catch (error) {
-      setError(error)
-    }
-
+    // Update branches state
     setBranches([...branches, newBranch]);
     setShowBranchModal(false);
-  };
+
+  } catch (error) {
+    console.error('Branch Creation Error:', error);
+    setError(error.message);
+  }
+};
 
   return (
     <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -443,7 +544,7 @@ function Dashboard() {
                 {companyData?.logoUrl ? (
                   <img
                     src={companyData?.logoUrl}
-                    alt='logo'
+                    alt="logo"
                     className="h-8 w-8 object-cover rounded"
                   />
                 ) : (
@@ -451,7 +552,9 @@ function Dashboard() {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{companyData?.company_name}</h1>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {companyData?.company_name}
+                </h1>
                 <div className="flex items-center text-gray-600 text-sm">
                   <MapPin className="h-4 w-4 mr-1" />
                   <span>{companyData?.location}</span>
@@ -466,7 +569,7 @@ function Dashboard() {
               {branches.length > 0 && (
                 <div className="relative">
                   <select
-                    value={branches.id || ''}
+                    value={branches.id || ""}
                     onChange={(e) => handleSwitchBranch(e.target.value)}
                     className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
@@ -510,8 +613,12 @@ function Dashboard() {
                 <Star className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                <p className="text-2xl font-bold text-gray-900">{averageRating}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Average Rating
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {averageRating}
+                </p>
                 <p className="text-xs text-gray-500">{totalRatings} reviews</p>
               </div>
             </div>
@@ -523,9 +630,15 @@ function Dashboard() {
                 <Target className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Services</p>
-                <p className="text-2xl font-bold text-gray-900">{activeServicePoints}</p>
-                <p className="text-xs text-gray-500">of {companyData?.servicePoints?.length} total</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Active Services
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {activeServicePoints}
+                </p>
+                <p className="text-xs text-gray-500">
+                  of {companyData?.servicePoints?.length} total
+                </p>
               </div>
             </div>
           </div>
@@ -537,7 +650,9 @@ function Dashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Comments</p>
-                <p className="text-2xl font-bold text-gray-900">{totalComments}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {totalComments}
+                </p>
                 <p className="text-xs text-gray-500">user feedback</p>
               </div>
             </div>
@@ -549,8 +664,12 @@ function Dashboard() {
                 <Lightbulb className="h-6 w-6 text-orange-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Suggested Ideas</p>
-                <p className="text-2xl font-bold text-gray-900">{pendingSuggestions}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Suggested Ideas
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {pendingSuggestions}
+                </p>
                 <p className="text-xs text-gray-500">suggestions</p>
               </div>
             </div>
@@ -567,10 +686,11 @@ function Dashboard() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
+                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === tab.id
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
                   >
                     <Icon className="h-5 w-5 mr-2" />
                     {tab.label}
@@ -582,12 +702,14 @@ function Dashboard() {
 
           <div className="p-6">
             {/* Overview Tab */}
-            {activeTab === 'overview' && (
+            {activeTab === "overview" && (
               <div className="space-y-8">
                 {/* Company Info Pie Chart */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Feedback Distribution</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Feedback Distribution
+                    </h3>
                     <div className="w-full max-w-xs mx-auto">
                       <Pie
                         data={pieChartData}
@@ -595,11 +717,12 @@ function Dashboard() {
                           responsive: true,
                           plugins: {
                             legend: {
-                              position: 'bottom',
+                              position: "bottom",
                             },
                             tooltip: {
                               callbacks: {
-                                label: (context) => `${context.label}: ${context.raw}%`,
+                                label: (context) =>
+                                  `${context.label}: ${context.raw}%`,
                               },
                             },
                           },
@@ -609,15 +732,20 @@ function Dashboard() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Rating Distribution</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Rating Distribution
+                    </h3>
                     <div className="space-y-2">
                       {[5, 4, 3, 2, 1].map((rating) => {
                         const count = distribution[rating];
-                        const percentage = totalRatings > 0 ? (count / totalRatings) * 100 : 0;
+                        const percentage =
+                          totalRatings > 0 ? (count / totalRatings) * 100 : 0;
 
                         return (
                           <div key={rating} className="flex items-center">
-                            <span className="text-sm text-gray-600 w-6">{rating}</span>
+                            <span className="text-sm text-gray-600 w-6">
+                              {rating}
+                            </span>
                             <Star className="h-4 w-4 text-yellow-400 fill-current mx-2" />
                             <div className="flex-1 bg-gray-200 rounded-full h-2">
                               <div
@@ -625,7 +753,9 @@ function Dashboard() {
                                 style={{ width: `${percentage}%` }}
                               />
                             </div>
-                            <span className="text-sm text-gray-600 ml-2 w-8">{count}</span>
+                            <span className="text-sm text-gray-600 ml-2 w-8">
+                              {count}
+                            </span>
                           </div>
                         );
                       })}
@@ -636,7 +766,9 @@ function Dashboard() {
                 {/* Recent Activity */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Ratings</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Recent Ratings
+                    </h3>
                     <div className="w-full max-w-md mx-auto">
                       <Bar
                         data={ratingsBarData}
@@ -644,11 +776,12 @@ function Dashboard() {
                           responsive: true,
                           plugins: {
                             legend: {
-                              position: 'top',
+                              position: "top",
                             },
                             tooltip: {
                               callbacks: {
-                                label: (context) => `${context.dataset.label}: ${context.raw}`,
+                                label: (context) =>
+                                  `${context.dataset.label}: ${context.raw}`,
                               },
                             },
                           },
@@ -657,13 +790,13 @@ function Dashboard() {
                               beginAtZero: true,
                               title: {
                                 display: true,
-                                text: 'Number of Ratings',
+                                text: "Number of Ratings",
                               },
                             },
                             x: {
                               title: {
                                 display: true,
-                                text: 'Service Point',
+                                text: "Service Point",
                               },
                             },
                           },
@@ -673,7 +806,9 @@ function Dashboard() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Comments</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Recent Comments
+                    </h3>
                     <div className="w-full max-w-md mx-auto">
                       <Bar
                         data={commentsBarData}
@@ -681,11 +816,12 @@ function Dashboard() {
                           responsive: true,
                           plugins: {
                             legend: {
-                              position: 'top',
+                              position: "top",
                             },
                             tooltip: {
                               callbacks: {
-                                label: (context) => `${context.dataset.label}: ${context.raw}`,
+                                label: (context) =>
+                                  `${context.dataset.label}: ${context.raw}`,
                               },
                             },
                           },
@@ -694,13 +830,13 @@ function Dashboard() {
                               beginAtZero: true,
                               title: {
                                 display: true,
-                                text: 'Number of Comments',
+                                text: "Number of Comments",
                               },
                             },
                             x: {
                               title: {
                                 display: true,
-                                text: 'Service Point',
+                                text: "Service Point",
                               },
                             },
                           },
@@ -713,63 +849,95 @@ function Dashboard() {
             )}
 
             {/* Service Points Tab */}
-            {activeTab === 'service-points' && (
+            {activeTab === "service-points" && (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900">Service Points</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Service Points
+                  </h3>
                   <span className="text-sm text-gray-600">
-                    {activeServicePoints} active of {companyData?.servicePoints?.length} total
+                    {activeServicePoints} active of{" "}
+                    {companyData?.servicePoints?.length} total
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {companyData?.servicePoints?.map((servicePoint) => {
                     // Filter ratings for this specific service point
-                    const serviceRatings = ratings.filter(r => r.service_point === servicePoint.name);
+                    const serviceRatings = ratings.filter(
+                      (r) => r.service_point === servicePoint.name
+                    );
                     // Aggregate all criteria scores for this service point
                     let totalScore = 0;
                     let totalCount = 0;
-                    serviceRatings.forEach(r => {
-                      const ratingObj = typeof r.rating === 'string' ? JSON.parse(r.rating) : r.rating;
-                      Object.values(ratingObj).forEach(val => {
-                        if (typeof val === 'number') {
+                    serviceRatings.forEach((r) => {
+                      const ratingObj =
+                        typeof r.rating === "string"
+                          ? JSON.parse(r.rating)
+                          : r.rating;
+                      Object.values(ratingObj).forEach((val) => {
+                        if (typeof val === "number") {
                           totalScore += val;
                           totalCount++;
                         }
                       });
                     });
-                    const avgRating = totalCount > 0 ? (totalScore / totalCount) : 0;
+                    const avgRating =
+                      totalCount > 0 ? totalScore / totalCount : 0;
 
                     return (
-                      <div key={servicePoint.id} className="border border-gray-200 rounded-lg p-6">
+                      <div
+                        key={servicePoint.id}
+                        className="border border-gray-200 rounded-lg p-6"
+                      >
                         <div className="flex justify-between items-start mb-4">
                           <div>
-                            <h4 className="font-semibold text-gray-900">{servicePoint.name}</h4>
-                            <p className="text-sm text-gray-600">{servicePoint.department}</p>
+                            <h4 className="font-semibold text-gray-900">
+                              {servicePoint.name}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {servicePoint.department}
+                            </p>
                           </div>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${servicePoint.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                            }`}>
-                            {servicePoint.isActive ? 'Active' : 'Inactive'}
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              servicePoint.isActive
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {servicePoint.isActive ? "Active" : "Inactive"}
                           </span>
                         </div>
                         <div className="mb-4">
-                          <p className="text-sm font-medium text-gray-900">Rating Criteria:</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Rating Criteria:
+                          </p>
                           <ul className="list-disc list-inside text-sm text-gray-600">
-                            {servicePoint.ratingCriteria.map((criterion, index) => (
-                              <li key={index}>
-                                {criterion.title}
-                                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${criterion.isRequired ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800'}`}>
-                                  {criterion.isRequired ? 'Required' : 'Optional'}
-                                </span>
-                              </li>
-                            ))}
+                            {servicePoint.ratingCriteria.map(
+                              (criterion, index) => (
+                                <li key={index}>
+                                  {criterion.title}
+                                  <span
+                                    className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      criterion.isRequired
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-slate-100 text-slate-800"
+                                    }`}
+                                  >
+                                    {criterion.isRequired
+                                      ? "Required"
+                                      : "Optional"}
+                                  </span>
+                                </li>
+                              )
+                            )}
                           </ul>
                         </div>
                         <div className="flex justify-between items-center">
                           {renderStars(avgRating)}
                           <span className="text-xs text-gray-500">
-                            {serviceRatings.length} {serviceRatings.length === 1 ? 'review' : 'reviews'}
+                            {serviceRatings.length}{" "}
+                            {serviceRatings.length === 1 ? "review" : "reviews"}
                           </span>
                         </div>
                       </div>
@@ -780,7 +948,7 @@ function Dashboard() {
             )}
 
             {/* Ratings Tab */}
-            {activeTab === 'ratings' && (
+            {activeTab === "ratings" && (
               <div>
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <div className="relative flex-1">
@@ -808,44 +976,72 @@ function Dashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  {getFilteredRatings(ratings, filterCategory, searchTerm).map((rating) => {
-                    const ratingObj = typeof rating.rating === 'string' ? JSON.parse(rating.rating) : rating.rating;
-                    const avgScore = Object.values(ratingObj).filter(val => typeof val === 'number').reduce((a, b) => a + b, 0) / Object.keys(ratingObj).length || 0;
-                    return (
-                      <div key={rating.id} className="border border-gray-200 rounded-lg p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <p className="font-semibold text-gray-900">{rating.username}</p>
-                            <p className="text-sm text-gray-600">{rating.service_point}</p>
-                          </div>
-                          <div className="text-right">
-                            {renderStars(avgScore)}
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(rating.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 text-gray-700 text-sm space-y-1">
-                          {Object.entries(ratingObj).map(([key, value]) => (
-                            <div key={key} className="flex items-center justify-evenly bg-gray-50 p-2 rounded-full m-1">
-                              <span>Criterion: {key}</span>
-                              <div className="flex items-center">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star key={star} className={`h-4 w-4 ${star <= value ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                                ))}
-                              </div>
+                  {getFilteredRatings(ratings, filterCategory, searchTerm).map(
+                    (rating) => {
+                      const ratingObj =
+                        typeof rating.rating === "string"
+                          ? JSON.parse(rating.rating)
+                          : rating.rating;
+                      const avgScore =
+                        Object.values(ratingObj)
+                          .filter((val) => typeof val === "number")
+                          .reduce((a, b) => a + b, 0) /
+                          Object.keys(ratingObj).length || 0;
+                      return (
+                        <div
+                          key={rating.id}
+                          className="border border-gray-200 rounded-lg p-6"
+                        >
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {rating.username}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {rating.service_point}
+                              </p>
                             </div>
-                          ))}
+                            <div className="text-right">
+                              {renderStars(avgScore)}
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(
+                                  rating.created_at
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 text-gray-700 text-sm space-y-1">
+                            {Object.entries(ratingObj).map(([key, value]) => (
+                              <div
+                                key={key}
+                                className="flex items-center justify-evenly bg-gray-50 p-2 rounded-full m-1"
+                              >
+                                <span>Criterion: {key}</span>
+                                <div className="flex items-center">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`h-4 w-4 ${
+                                        star <= value
+                                          ? "text-yellow-400 fill-current"
+                                          : "text-gray-300"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    }
+                  )}
                 </div>
               </div>
             )}
 
             {/* Comments Tab */}
-            {activeTab === 'comments' && (
+            {activeTab === "comments" && (
               <div>
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <div className="relative flex-1">
@@ -873,14 +1069,26 @@ function Dashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  {getFilteredFeedback(recentComments, filterCategory, searchTerm).map((comment, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-6">
+                  {getFilteredFeedback(
+                    recentComments,
+                    filterCategory,
+                    searchTerm
+                  ).map((comment, index) => (
+                    <div
+                      key={index}
+                      className="border border-gray-200 rounded-lg p-6"
+                    >
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <p className="font-semibold text-gray-900">{comment.username}</p>
-                          <p className="text-sm text-gray-600">{comment.phone_number}</p>
+                          <p className="font-semibold text-gray-900">
+                            {comment.username}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {comment.phone_number}
+                          </p>
                           <p className="text-xs text-blue-600">
-                            Service Point: {getServicePointByRatingId(comment.rating_id)}
+                            Service Point:{" "}
+                            {getServicePointByRatingId(comment.rating_id)}
                           </p>
                         </div>
                         <div className="text-right">
@@ -904,36 +1112,53 @@ function Dashboard() {
             )}
 
             {/* User Prefs Tab */}
-            {activeTab === 'user-prefs' && (
+            {activeTab === "user-prefs" && (
               <div>
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">User Defined Ratings</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    User Defined Ratings
+                  </h3>
                   <p className="text-gray-600">
                     These are the added user preferences.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {otherData.map((pref) => (
-                    <div key={pref.id} className="border border-gray-200 rounded-lg p-6">
+                    <div
+                      key={pref.id}
+                      className="border border-gray-200 rounded-lg p-6"
+                    >
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h4 className="font-semibold text-gray-900">{pref.username}</h4>
-                          <p className="text-sm text-gray-600">{pref.phone_number}</p>
+                          <h4 className="font-semibold text-gray-900">
+                            {pref.username}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {pref.phone_number}
+                          </p>
                         </div>
-                        <span className='px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800'>
-                          {pref.department ? pref.department : 'General'}
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          {pref.department ? pref.department : "General"}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900 mb-2">Rating Criteria:</p>
+                        <p className="text-sm font-medium text-gray-900 mb-2">
+                          Rating Criteria:
+                        </p>
                         <div className="space-y-2">
                           <div className="overflow-x-auto">
                             <table className="min-w-full bg-white border border-gray-200 rounded-lg">
                               <thead>
                                 <tr>
-                                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">Named-Criteria</th>
-                                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">Rating-Given</th>
-                                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">Description</th>
+                                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">
+                                    Named-Criteria
+                                  </th>
+                                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">
+                                    Rating-Given
+                                  </th>
+                                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">
+                                    Description
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -944,7 +1169,11 @@ function Dashboard() {
                                       {[1, 2, 3, 4, 5].map((star) => (
                                         <Star
                                           key={star}
-                                          className={`h-4 w-4 ${star <= pref.ratings ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                                          className={`h-4 w-4 ${
+                                            star <= pref.ratings
+                                              ? "text-yellow-400 fill-current"
+                                              : "text-gray-300"
+                                          }`}
                                         />
                                       ))}
                                     </div>
@@ -967,7 +1196,7 @@ function Dashboard() {
             )}
 
             {/* Suggestions Tab */}
-            {activeTab === 'suggestions' && (
+            {activeTab === "suggestions" && (
               <div>
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <div className="relative flex-1">
@@ -983,25 +1212,37 @@ function Dashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  {getFilteredSuggestion(suggestions, searchTerm).map((suggestion, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{suggestion.username}</h4>
-                          <p className="text-sm text-gray-600">{suggestion.phone_number}</p>
+                  {getFilteredSuggestion(suggestions, searchTerm).map(
+                    (suggestion, index) => (
+                      <div
+                        key={index}
+                        className="border border-gray-200 rounded-lg p-6"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">
+                              {suggestion.username}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {suggestion.phone_number}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {getServicePointByRatingId(suggestion.rating_id)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <span className='px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800'>
-                            {getServicePointByRatingId(suggestion.rating_id)}
-                          </span>
-                        </div>
+                        <p className="text-gray-700 mb-4">
+                          {suggestion.suggestion}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Submitted{" "}
+                          {new Date(suggestion.date).toLocaleDateString()}
+                        </p>
                       </div>
-                      <p className="text-gray-700 mb-4">{suggestion.suggestion}</p>
-                      <p className="text-xs text-gray-500">
-                        Submitted {new Date(suggestion.date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -1011,11 +1252,12 @@ function Dashboard() {
 
       <BranchModal
         isOpen={showBranchModal}
-        onClose={() => { setShowBranchModal(false) }}
+        onClose={() => {
+          setShowBranchModal(false);
+        }}
         onSave={handleSaveBranch}
         servicePoints={companyData?.CompanyServicePoints}
       />
-
     </div>
   );
 }

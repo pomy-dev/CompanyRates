@@ -70,6 +70,11 @@ function RegistrationForm({ onRegister, onBack }) {
     else console.log(data);
   };
 
+
+
+
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
