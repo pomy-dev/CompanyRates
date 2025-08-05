@@ -451,10 +451,59 @@ function Dashboard() {
     // setBranches(branch)
   };
 
-  const handleSaveBranch = async (formData) => {
-    const companyId = localStorage.getItem("company_id");
+ const handleSaveBranch = async (formData) => {
+  const companyId = localStorage.getItem("company_id");
+  
+  const formatBranchInput = (formData, companyId) => {
+    return {
+      company_id: companyId?.trim(),
+      branch_name: formData.branchName,
+      branch_code: formData.branchCode,
+      location: formData.location,
+      address: formData.address,
+      contact_phone: formData.contactPhone,
+      contact_email: formData.contactEmail,
+      manager_name: formData.manager,
+      branch_type: formData.branchType,
+      service_points: formData.servicePoints
+        ?.map((sp) =>
+          sp.criteria.map((c) => ({
+            service_point_id: sp.id, 
+            rating_criteria_id: c.id,
+          }))
+        )
+        .flat(), // Flatten the nested arrays
+    };
+  };
+
+  try {
+    // Validate inputs
+    if (!companyId) {
+      throw new Error('Company ID is required');
+    }
+
+    // Format the input for the RPC
+    const branchInput = formatBranchInput(formData, companyId);
+
+    // Log the input for debugging
+    console.log('Branch Input for RPC:', branchInput);
+
+    // Use the formatted input in the RPC call
+    const { data, error } = await supabase.rpc(
+      "create_branch_with_service_points", 
+      { p_input: branchInput }
+    );
+
+    // Check for errors
+    if (error) {
+      console.error('Supabase RPC Error:', error.message);
+      setError(error);
+      return;
+    }
+
+    // If successful, update local state
     const newBranch = {
-      id: Date.now(),
+      id: data, // Assuming the RPC returns the new branch ID
       companyId: companyId?.trim(),
       branchName: formData.branchName,
       branchCode: formData.branchCode,
@@ -475,51 +524,15 @@ function Dashboard() {
       })),
     };
 
-    try {
-      // const insertedBranch = await insertNewBranch(newBranch);
-
-      const formatBranchInput = (formData, companyId) => {
-        return {
-          company_id: companyId?.trim(),
-          branch_name: formData.branchName,
-          branch_code: formData.branchCode,
-          location: formData.location,
-          address: formData.address,
-          contact_phone: formData.contactPhone,
-          contact_email: formData.contactEmail,
-          manager_name: formData.manager,
-          branch_type: formData.branchType,
-          service_points: formData.servicePoints
-            ?.map((sp) =>{
-              console.log('4444444444444444444444444444444')
-              console.log('4444444444444444444444444444444')
-              console.log('4444444444444444444444444444444')
-              console.log(sp.id)
-              // sp.criteria.map((c) => ({
-              //   service_point_id: sp.id, 
-              //   rating_criteria_id: c.id,
-              // }));
-            }
-            )
-            .flat(), // Flatten the nested arrays
-        };
-      };
-
-      // Example usage
-      const branchInput = formatBranchInput(formData, companyId);
-      
-      
-      // const result = await supabase.rpc('create_branch_with_service_points', { input: branchInput });
-
-      console.log("Branch from Dashboard");
-      console.log(branchInput);
-    } catch (error) {
-      setError(error);
-    }
-
+    // Update branches state
     setBranches([...branches, newBranch]);
     setShowBranchModal(false);
-  };
+
+  } catch (error) {
+    console.error('Branch Creation Error:', error);
+    setError(error.message);
+  }
+};
 
   return (
     <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50">

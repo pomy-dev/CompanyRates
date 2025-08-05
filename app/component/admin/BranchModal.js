@@ -111,6 +111,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
           ...formData,
           servicePoints: formData.servicePoints?.map(sp => ({
             name: sp.name,
+            id : sp.id,
             criteria: sp.criteria.map(c => ({
               id: c.id,
               title: c.title,
