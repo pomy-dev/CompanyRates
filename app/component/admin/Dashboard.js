@@ -30,10 +30,7 @@ import {
 import { Pie, Bar } from "react-chartjs-2";
 import BranchModal from "./BranchModal";
 import { mockBranches } from "../../../utils/data";
-import {
-  insertNewBranch,
-  getCompanyServicePointCriteria,
-} from "../../../services/companyService";
+import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches } from "../../../services/companyService";
 
 ChartJS.register(
   ArcElement,
@@ -66,13 +63,16 @@ function Dashboard() {
     4: 0,
     5: 0,
   });
-  const [branches, setBranches] = useState(mockBranches);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState("");
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
-    async function fetchData() {
+    // Fetch company service points with respective criteria
+    async function fetchServicePoints() {
       try {
         const companyId = user?.id;
 
@@ -83,16 +83,21 @@ function Dashboard() {
 
         if (!retrievedCompanyData) return;
 
-        // Structure data to match original component expectations
-
-        // const formattedData = {
-        //   ...retrievedCompanyData
-        // };
-
         setCompanyData(retrievedCompanyData);
         console.log(retrievedCompanyData);
       } catch (err) {
         setError(err.message);
+      }
+    }
+
+    // Fetch comppany branches
+    async function fetchCompanyBranches() {
+      try {
+        const branchesData = await fetchBranches(user?.id);
+        if (!branchesData) return;
+        setBranches(branchesData);
+      } catch (error) {
+        console.error('Error in fetchCompanyBranches:', error.message);
       }
     }
 
@@ -121,6 +126,7 @@ function Dashboard() {
         if (!r?.rating) return;
 
         let ratingObj;
+
         try {
           ratingObj =
             typeof r.rating === "string" ? JSON.parse(r.rating) : r.rating;
@@ -141,6 +147,7 @@ function Dashboard() {
           totalSum += score;
           totalCount++;
         });
+
       });
 
       const avg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : 0;
@@ -259,23 +266,23 @@ function Dashboard() {
     fetchOtherData();
     fetchComments();
     fetchRatings();
-    fetchData();
+    fetchServicePoints();
+    fetchCompanyBranches();
   }, [user]);
 
   const handleTest = () => {
     console.log(companyData);
   };
 
-  const activeServicePoints =
-    companyData?.CompanyServicePoints?.filter((sp) => sp.isActive).length || 0;
+  const activeServicePoints = companyData?.CompanyServicePoints?.filter((sp) => sp.isActive).length || 0;
 
   const totalComments = Array.isArray(comments)
     ? comments.filter(
-        (c) =>
-          c.comments &&
-          typeof c.comments === "object" &&
-          Object.keys(c.comments).length > 0
-      ).length
+      (c) =>
+        c.comments &&
+        typeof c.comments === "object" &&
+        Object.keys(c.comments).length > 0
+    ).length
     : 0;
 
   const pendingSuggestions = comments.length || 0;
@@ -341,9 +348,8 @@ function Dashboard() {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-4 w-4 ${
-              star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"
-            }`}
+            className={`h-4 w-4 ${star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"
+              }`}
           />
         ))}
         <span className="ml-2 text-sm text-gray-600">{rating.toFixed(1)}</span>
@@ -367,22 +373,27 @@ function Dashboard() {
       </div>
     );
   }
+
   const totalUsers = users?.length || 0;
 
   const ratingsOnlyCount = users.filter(
     (u) => u.user_path === "rating_only"
   ).length;
+
   const suggestionsOnlyCount = users.filter(
     (u) => u.user_path === "suggestion_only"
   ).length;
+
   const bothCount = users.filter((u) => u.user_path === "both").length;
 
   const ratingO = totalUsers
     ? Math.round((ratingsOnlyCount / totalUsers) * 100)
     : 0;
+
   const suggO = totalUsers
     ? Math.round((suggestionsOnlyCount / totalUsers) * 100)
     : 0;
+
   const both = totalUsers ? Math.round((bothCount / totalUsers) * 100) : 0;
 
   const pieChartData = {
@@ -402,13 +413,6 @@ function Dashboard() {
       const service = servicePoint?.servicepoint;
       return service;
     }) || [];
-
-  // const displayedServicePoints =
-  //   selectedBranchId
-  //     ? branches.find((b) => b.id === parseInt(selectedBranchId))?.servicePoints || []
-  //     : companyData?.servicePoints || [];
-
-  // Mock data for ratings bar chart
 
   const ratingsBarData = {
     labels: retrievedServicePoints,
@@ -447,91 +451,58 @@ function Dashboard() {
     ],
   };
 
-  const handleSwitchBranch = (branch) => {
-    // setBranches(branch)
+  const handleSwitchBranch = (branchId) => {
+    setSelectedBranchId(branchId);
+    // Optional: fetch or update something based on selected branch
+    const selectedBranch = branches.find((b) => b.branch_id === branchId);
+    console.log("Selected branch:", selectedBranch);
   };
 
- const handleSaveBranch = async (formData) => {
-  const companyId = localStorage.getItem("company_id");
-  
-  const formatBranchInput = (formData, companyId) => {
-    return {
-      company_id: companyId?.trim(),
-      branch_name: formData.branchName,
-      branch_code: formData.branchCode,
-      location: formData.location,
-      address: formData.address,
-      contact_phone: formData.contactPhone,
-      contact_email: formData.contactEmail,
-      manager_name: formData.manager,
-      branch_type: formData.branchType,
-      service_points: formData.servicePoints
-        ?.map((sp) =>
-          sp.criteria.map((c) => ({
-            service_point_id: sp.id, 
-            rating_criteria_id: c.id,
-          }))
-        )
-        .flat(), // Flatten the nested arrays
-    };
-  };
+  const handleSaveBranch = async (formData) => {
+    const companyId = localStorage.getItem("company_id");
+    setIsLoading(true)
 
-  try {
-    // Validate inputs
-    if (!companyId) {
-      throw new Error('Company ID is required');
-    }
+    try {
+      const insertedBranch = await insertNewBranch(companyId, formData)
 
-    // Format the input for the RPC
-    const branchInput = formatBranchInput(formData, companyId);
+      // Check for errors
+      if (!insertedBranch) throw 'Something went wrong! New branch could not be inserted';
 
-    // Log the input for debugging
-    console.log('Branch Input for RPC:', branchInput);
-
-    // Use the formatted input in the RPC call
-    const { data, error } = await supabase.rpc(
-      "create_branch_with_service_points", 
-      { p_input: branchInput }
-    );
-
-    // Check for errors
-    if (error) {
-      console.error('Supabase RPC Error:', error.message);
-      setError(error);
-      return;
-    }
-
-    // If successful, update local state
-    const newBranch = {
-      id: data, // Assuming the RPC returns the new branch ID
-      companyId: companyId?.trim(),
-      branchName: formData.branchName,
-      branchCode: formData.branchCode,
-      branchType: formData.branchType,
-      location: formData.location,
-      address: formData.address,
-      contactEmail: formData.contactEmail,
-      contactPhone: formData.contactPhone,
-      manager: formData.manager,
-      isActive: formData.isActive,
-      servicePoints: formData.servicePoints?.map((sp) => ({
-        servicePoint: sp.name,
-        criteria: sp.criteria.map((c) => ({
-          id: c?.id,
-          title: c?.title
+      // If successful, update local state
+      const newBranch = {
+        id: insertedBranch, // Assuming the RPC returns the new branch ID
+        companyId: companyId?.trim(),
+        branchName: formData.branchName,
+        branchCode: formData.branchCode,
+        branchType: formData.branchType,
+        location: formData.location,
+        address: formData.address,
+        contactEmail: formData.contactEmail,
+        contactPhone: formData.contactPhone,
+        manager: formData.manager,
+        isActive: formData.isActive,
+        servicePoints: formData.servicePoints?.map((sp) => ({
+          servicePointId: sp.id,
+          servicePoint: sp.name,
+          criteria: sp.criteria.map((c) => ({
+            id: c?.id,
+            title: c?.title
+          })),
         })),
-      })),
-    };
+      };
 
-    // Update branches state
-    setBranches([...branches, newBranch]);
-    setShowBranchModal(false);
+      // Update branches state
+      setBranches([...branches, newBranch]);
 
-  } catch (error) {
-    console.error('Branch Creation Error:', error);
-    setError(error.message);
-  }
-};
+    } catch (error) {
+      setIsLoading(false)
+      console.error('Branch Creation Error:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false)
+      setShowBranchModal(false);
+    }
+  };
 
   return (
     <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -566,16 +537,17 @@ function Dashboard() {
 
             <div className="flex items-center space-x-4">
               {/* Branch Selector */}
-              {branches.length > 0 && (
+              {branches?.length > 0 && (
                 <div className="relative">
                   <select
-                    value={branches.id || ""}
+                    value={selectedBranchId}
                     onChange={(e) => handleSwitchBranch(e.target.value)}
-                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
                   >
-                    {branches?.map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}-branch
+                    <option value="">Select Branch</option>
+                    {branches.map((branch, index) => (
+                      <option key={index} value={branch.branch_id}>
+                        {branch.branch_name}-branch
                       </option>
                     ))}
                   </select>
@@ -686,11 +658,10 @@ function Dashboard() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === tab.id
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
+                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      }`}
                   >
                     <Icon className="h-5 w-5 mr-2" />
                     {tab.label}
@@ -899,11 +870,10 @@ function Dashboard() {
                             </p>
                           </div>
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              servicePoint.isActive
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${servicePoint.isActive
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                              }`}
                           >
                             {servicePoint.isActive ? "Active" : "Inactive"}
                           </span>
@@ -918,11 +888,10 @@ function Dashboard() {
                                 <li key={index}>
                                   {criterion.title}
                                   <span
-                                    className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                                      criterion.isRequired
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-slate-100 text-slate-800"
-                                    }`}
+                                    className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${criterion.isRequired
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-slate-100 text-slate-800"
+                                      }`}
                                   >
                                     {criterion.isRequired
                                       ? "Required"
@@ -986,7 +955,7 @@ function Dashboard() {
                         Object.values(ratingObj)
                           .filter((val) => typeof val === "number")
                           .reduce((a, b) => a + b, 0) /
-                          Object.keys(ratingObj).length || 0;
+                        Object.keys(ratingObj).length || 0;
                       return (
                         <div
                           key={rating.id}
@@ -1021,11 +990,10 @@ function Dashboard() {
                                   {[1, 2, 3, 4, 5].map((star) => (
                                     <Star
                                       key={star}
-                                      className={`h-4 w-4 ${
-                                        star <= value
-                                          ? "text-yellow-400 fill-current"
-                                          : "text-gray-300"
-                                      }`}
+                                      className={`h-4 w-4 ${star <= value
+                                        ? "text-yellow-400 fill-current"
+                                        : "text-gray-300"
+                                        }`}
                                     />
                                   ))}
                                 </div>
@@ -1169,11 +1137,10 @@ function Dashboard() {
                                       {[1, 2, 3, 4, 5].map((star) => (
                                         <Star
                                           key={star}
-                                          className={`h-4 w-4 ${
-                                            star <= pref.ratings
-                                              ? "text-yellow-400 fill-current"
-                                              : "text-gray-300"
-                                          }`}
+                                          className={`h-4 w-4 ${star <= pref.ratings
+                                            ? "text-yellow-400 fill-current"
+                                            : "text-gray-300"
+                                            }`}
                                         />
                                       ))}
                                     </div>
@@ -1256,6 +1223,7 @@ function Dashboard() {
           setShowBranchModal(false);
         }}
         onSave={handleSaveBranch}
+        isSubmiting={isLoading}
         servicePoints={companyData?.CompanyServicePoints}
       />
     </div>

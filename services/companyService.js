@@ -96,60 +96,63 @@ export const getCompanyServicePointCriteria = async (companyId) => {
   return data;
 };
 
-/**
- * Inserts new entries into the 'other' table.
- * 
- * @param {Object} branchData - The data to be inserted.
- * @param {string} branchData.branchName - The new branch name for the entry.
- * @param {number} branchData.branchCode - branch code for the entry.
- * @param {string} branchData.branchType - The branchType the entry.
- * @param {string} branchData.address - branch physical address to the entry.
- * @param {string} branchData.location - state, city or town of the branch.
- * @param {string} branchData.contactEmail - The email of the branch.
- * @param {string} branchData.contactPhone - The phone of the branch.
- * @param {boolean} branchData.isActive - active service point.
- * @param {string} branchData.manager - The manager name of the branch.
- * @param {Object[]} branchData.servicePoints - The selected servicePoints of the branch[].
- * 
- * @returns {Promise<Object>} - The result of the insert operation, including data or error.
- */
-export const insertNewBranch = async (branchData) => {
-  // const { data, error } = await supabase
-  //   .from('Branches')
-  //   .insert({
-  //     company_id: branchData?.companyId,
-  //     branch_name: branchData?.branchName,
-  //     branch_code: branchData?.branchCode,
-  //     branch_type: branchData?.branchType,
-  //     location: branchData?.location,
-  //     address: branchData?.address,
-  //     contact_phone: branchData?.contactPhone,
-  //     contact_email: branchData?.contactEmail,
-  //     manager_name: branchData?.manager,
-  //     is_active: branchData?.isActive
-  //   })
-  //   .select();
-  const { data, error } = await supabase
-    .rpc('create_branch_with_service_points',{
-      // jsonb_build_object()
-    })
-    .insert({
-      company_id: branchData?.companyId,
-      branch_name: branchData?.branchName,
-      branch_code: branchData?.branchCode,
-      branch_type: branchData?.branchType,
-      location: branchData?.location,
-      address: branchData?.address,
-      contact_phone: branchData?.contactPhone,
-      contact_email: branchData?.contactEmail,
-      manager_name: branchData?.manager,
-      is_active: branchData?.isActive
-    })
+export const insertNewBranch = async (companyId, branchData) => {
+  if (!companyId) {
+    throw new Error('Company ID is required');
+  }
+
+  const formatBranchInput = {
+    company_id: companyId?.trim(),
+    branch_name: branchData.branchName,
+    branch_code: branchData.branchCode,
+    location: branchData.location,
+    address: branchData.address,
+    contact_phone: branchData.contactPhone,
+    contact_email: branchData.contactEmail,
+    manager_name: branchData.manager,
+    branch_type: branchData.branchType,
+    service_points: branchData.servicePoints
+      ?.map((sp) =>
+        sp.criteria.map((c) => ({
+          service_point_id: sp.id,
+          rating_criteria_id: c.id,
+        }))
+      )
+      .flat()
+  };
+
+  // Log the input for debugging
+  console.log('Branch Input for RPC:', formatBranchInput);
+
+  // Use the formatted input in the RPC call
+  const { data, error } = await supabase.rpc(
+    "create_branch_with_service_points",
+    { p_input: formatBranchInput }
+  );
 
   if (error) {
     console.error('Error inserting into branches table:', error);
     throw error;
   }
 
-  return data; // Return the inserted data
+  return data;
 };
+
+export const fetchBranches = async (companyId) => {
+  if (!companyId) {
+    throw new Error('Company ID is required');
+  }
+
+  // Retrieve branches' services points and criteria
+  const { data, error } = await supabase
+    .rpc('get_company_branches_summary', { p_company_id: companyId });
+
+  if (error) {
+    console.error('Error fetching branches grouped data:', error.message);
+    return;
+  }
+
+  console.log('Grouped data for company:', data);
+
+  return data;
+}

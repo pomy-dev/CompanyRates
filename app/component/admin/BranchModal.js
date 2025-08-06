@@ -3,7 +3,7 @@ import { X, Building2, MapPin, Mail, Phone, User, Binary, Boxes, MapPinned } fro
 import CriteriaModal from './CriteriaModal';
 import { PiSpinner } from "react-icons/pi";
 
-const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
+const BranchModal = ({ isOpen, onClose, onSave, isSubmiting, servicePoints }) => {
   const [formData, setFormData] = useState({
     branchName: '',
     branchCode: '',
@@ -19,7 +19,6 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
   const [errors, setErrors] = useState({});
   const [isCriteriaOpen, setIsCriteriaOpen] = useState(false);
   const [selectedServicePoint, setSelectedServicePoint] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
@@ -48,9 +47,10 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
 
       setFormData((prev) => ({
         ...prev,
-        servicePoints: [...prev.servicePoints, { 
-          id:servicePoint?.id,
-          name: servicePoint?.servicepoint, criteria: [] }],
+        servicePoints: [...prev.servicePoints, {
+          id: servicePoint?.id,
+          name: servicePoint?.servicepoint, criteria: []
+        }],
       }));
 
       setSelectedServicePoint(servicePoint);
@@ -69,7 +69,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
           servicePoints: [
             ...updatedServicePoints,
             {
-              id:selectedServicePoint?.id,
+              id: selectedServicePoint?.id,
               name: selectedServicePoint?.servicepoint,
               criteria: criteriaList,
             },
@@ -102,7 +102,6 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setIsLoading(true);
 
     try {
       if (validateForm()) {
@@ -111,7 +110,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
           ...formData,
           servicePoints: formData.servicePoints?.map(sp => ({
             name: sp.name,
-            id : sp.id,
+            id: sp.id,
             criteria: sp.criteria.map(c => ({
               id: c.id,
               title: c.title,
@@ -138,13 +137,9 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
         });
 
         setErrors({});
-        setIsLoading(false);
       }
     } catch (error) {
       console.log(error)
-      setIsLoading(false);
-    } finally {
-      onClose();
     }
 
   };
@@ -201,6 +196,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Branch Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
                 <div>
                   <label className="flex block text-sm font-medium text-gray-700 mb-2"><Building2 className="transform h-5 w-5 text-gray-400 mr-2 ml-2" />Branch Name *</label>
                   <input
@@ -210,6 +206,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.branchName ? 'border-red-300' : 'border-gray-300'}`}
                     placeholder="e.g., Downtown Branch, West Office"
+                    required
                   />
                   {errors.branchName && <p className="text-red-600 text-sm mt-1">{errors.branchName}</p>}
                 </div>
@@ -239,6 +236,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
                   />
                   {errors.branchType && <p className="text-red-600 text-sm mt-1">{errors.branchType}</p>}
                 </div>
+
               </div>
             </div>
 
@@ -255,6 +253,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.location ? 'border-red-300' : 'border-gray-300'}`}
                     placeholder="Manzini, eSwatini,"
+                    required
                   />
                   {errors.location && <p className="text-red-600 text-sm mt-1">{errors.location}</p>}
                 </div>
@@ -278,6 +277,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
                 <div>
                   <label className="flex block text-sm font-medium text-gray-700 mb-2"><Mail className="h-5 w-5 text-gray-400 mr-2 ml-2" />Contact Email *</label>
                   <input
@@ -287,6 +287,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.contactEmail ? 'border-red-300' : 'border-gray-300'}`}
                     placeholder="branch@company.com"
+                    required
                   />
                   {errors.contactEmail && <p className="text-red-600 text-sm mt-1">{errors.contactEmail}</p>}
                 </div>
@@ -300,6 +301,7 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder="+ (268) 7812 3456"
+                    required
                   />
                 </div>
 
@@ -312,9 +314,11 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.manager ? 'border-red-300' : 'border-gray-300'}`}
                     placeholder="Manager's full name"
+                    required
                   />
                   {errors.manager && <p className="text-red-600 text-sm mt-1">{errors.manager}</p>}
                 </div>
+
               </div>
             </div>
 
@@ -364,11 +368,12 @@ const BranchModal = ({ isOpen, onClose, onSave, servicePoints }) => {
             >
               Cancel
             </button>
+
             <button
               type="submit"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+              className="flex justify-center items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
             >
-              {isLoading ? <PiSpinner className="animate-spin" /> : 'Add'} Branch
+              {isSubmiting ? <PiSpinner className="animate-spin" /> : 'Add'} Branch
             </button>
           </div>
         </form>

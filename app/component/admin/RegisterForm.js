@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { X, ChevronDown, ChevronUp, Upload, Image } from "lucide-react";
-import { useAuth } from "../../../app-context/auth-context";
 import { PiSpinner } from "react-icons/pi";
 import { supabase } from "../../../services/supabaseService";
 import { uploadFileToStorage } from "../../../services/uploadFile";
@@ -35,7 +34,6 @@ function RegistrationForm({ onRegister, onBack }) {
   let [editingIndex, setEditingIndex] = useState(null);
   let [showModal, setShowModal] = useState(false);
   let [loading, setLoading] = useState(false);
-  let { registerCompany } = useAuth();
 
   function formatCompanyInput(C_id, input) {
     return {
@@ -69,11 +67,6 @@ function RegistrationForm({ onRegister, onBack }) {
     if (error) console.error(error);
     else console.log(data);
   };
-
-
-
-
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -162,103 +155,14 @@ function RegistrationForm({ onRegister, onBack }) {
     }
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   setLoading(true);
-
-  //   if (formData.password !== formData.confirmPassword) {
-  //     alert("Passwords do not match");
-  //     setLoading(false);
-  //     return;
-  //   }
-
-  //   let publicUrl = "";
-  //   if (formData.logoFile) {
-  //     // Generate a unique file name (e.g., using timestamp or UUID)
-  //     const fileName = `company_logo_${Date.now()}.${formData.logoFile.name
-  //       .split(".")
-  //       .pop()}`;
-  //     publicUrl = await uploadFileToStorage(
-  //       `images/${fileName}`,
-  //       formData.logoFile
-  //     );
-  //     if (!publicUrl) {
-  //       alert("Failed to upload logo");
-  //       setLoading(false);
-  //       return;
-  //     }
-  //   }
-
-  //   const companyData = {
-  //     ...formData,
-  //     logoUrl: publicUrl, // Use the public URL from Supabase
-  //     servicePoints: servicePoints.map((sp, index) => ({
-  //       ...sp,
-  //       id: `sp${index + 1}`,
-  //       ratingCriteria: sp.ratingCriteria.map((rc, rcIndex) => ({
-  //         ...rc,
-  //         id: `rc${index + 1}-${rcIndex + 1}`,
-  //       })),
-  //     })),
-  //   };
-
-  //   try {
-  //     const { data, error } = await supabase.auth.signUp({
-  //       email: formData.contactEmail,
-  //       password: formData.password,
-  //     });
-
-  //     if (error) throw error;
-
-  //     await registerCompany({
-  //       data,
-  //       ...companyData,
-  //     });
-
-  //     setLoading(false);
-  //     alert("Your Company Has been uploaded successfully.");
-
-  //     // Store company logo URL in localStorage
-  //     localStorage.setItem("companyLogo", publicUrl);
-
-  //     // Reset all fields and go back to step one
-  //     setShowModal(false);
-  //     setExpandedServicePoints({});
-  //     setTempRatingCriteria({ title: "", isRequired: false });
-  //     setTempServicePoint({
-  //       name: "",
-  //       department: "",
-  //       isActive: true,
-  //       ratingCriteria: [],
-  //     });
-  //     setServicePoints([]);
-  //     setFormData({
-  //       company_name: "",
-  //       location: "",
-  //       password: "",
-  //       confirmPassword: "",
-  //       industry: "",
-  //       contactEmail: "",
-  //       contactPhone: "",
-  //       logoFile: null,
-  //     });
-  //     setLogoPreviewUrl("");
-  //     setCurrentStep(1);
-  //   } catch (error) {
-  //     setLoading(false);
-  //     alert(error.message);
-  //   }
-  // };
-
   const handleLogoUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Create a local URL for preview
       const previewUrl = URL.createObjectURL(file);
       setLogoPreviewUrl(previewUrl);
       setFormData({
         ...formData,
-        logoFile: file // Store the File object
+        logoFile: file
       });
     }
   };
@@ -269,7 +173,6 @@ function RegistrationForm({ onRegister, onBack }) {
       logoFile: null
     });
     setLogoPreviewUrl('');
-    // Revoke the object URL to free memory
     if (logoPreviewUrl) {
       URL.revokeObjectURL(logoPreviewUrl);
     }
