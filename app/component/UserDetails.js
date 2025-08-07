@@ -44,6 +44,7 @@ function UserDetailsScreen() {
   const { phoneNumber, username, email } = data;
   const { notification } = useNotification();
   const company_id = localStorage.getItem("company_id");
+  const branch_id = localStorage.getItem("branch_id");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -84,7 +85,8 @@ function UserDetailsScreen() {
       phone: data?.phoneNumber,
       email: data?.email,
       user_path: user_path || 'rating_only',
-      company_id: company_id
+      company_id: company_id,
+      branch_id: branch_id || null,
     };
 
     if (data?.username || data?.phoneNumber) {
@@ -94,6 +96,7 @@ function UserDetailsScreen() {
           phone: data?.phoneNumber,
           email: data?.email,
           company_id: company_id,
+          branch_id: branch_id || null,
           user_path: user_path,
           sms: "waiting",
         });
@@ -127,6 +130,7 @@ function UserDetailsScreen() {
       suggestions: data.suggestionBox ? data.suggestionBox : null,
       ratingId: rateID ? rateID : null,
       company_id: company_id,
+      branch_id: branch_id || null,
     };
 
     try {
@@ -139,7 +143,7 @@ function UserDetailsScreen() {
 
   const submitData = async () => {
     try {
-      
+
       const user = (!isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)) ? await sendUser('both') : (!isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)) ? await sendUser('suggestion_only') : await sendUser('rating_only');
       user && console.log(`User Id from DB: ${user?.id}`);
 
@@ -147,21 +151,21 @@ function UserDetailsScreen() {
         setShowDialog(true);
         if (!isEmptyObject(data.ratings)) {
           try {
-            
-
             const ratingJson = data.formartedRatings;
-            let {error } = await supabase.rpc(
+            
+            let { error } = await supabase.rpc(
               "insert_multiple_ratings",
               {
                 p_company_id: company_id,
+                p_branch_id: branch_id,
                 p_ratings: ratingJson,
                 p_service_point: data.servicePoint.name,
                 p_sms: false,
                 p_user_id: user?.id,
               }
             );
-            if (error) throw error;
 
+            if (error) throw error;
 
             notification.ratingSubmitted();
           } catch (error) {
@@ -189,6 +193,7 @@ function UserDetailsScreen() {
               ratings: data.otherCriteria?.otherRating,
               comments: data.otherCriteria?.otherReason,
               company_id: company_id,
+              branch_id: branch_id || null,
               department: data.otherCriteria?.otherDepartment,
             };
             const otherData = await insertOther(otherCriterion);

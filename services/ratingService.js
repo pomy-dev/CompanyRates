@@ -3,7 +3,7 @@ import { supabase } from './supabaseService'; // Adjust the import path as neede
 export const insertUser = async (userData) => {
 
   const { data, error } = await supabase
-    .from('Users')
+    .from('users')
     .insert(userData)
     .select('*').single();
 
@@ -15,13 +15,14 @@ export const insertUser = async (userData) => {
   return data; // Return the inserted data
 };
 
-export const getAllUsersByCompanyId = async (user_id) => {
+export const getAllUsersByCompanyBranchId = async (companyId, branchId) => {
   const { data, error } = await supabase
-    .from('Users')
+    .from('users')
     .select('*')
-    .eq('company_id', user_id);
+    .eq('company_id', companyId)
+  // .eq('branch_id', branchId)
 
-  if (error) throw error;
+  if (error) throw error.message;
 
   return data;
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../services/supabaseService";
-import { getAllUsersByCompanyId } from "../../../services/ratingService";
+import { getAllUsersByCompanyBranchId } from "../../../services/ratingService";
 import {
   Building2,
   LogOut,
@@ -29,7 +29,9 @@ import {
 } from "chart.js";
 import { Pie, Bar } from "react-chartjs-2";
 import BranchModal from "./BranchModal";
+import LoadingModal from "./loadingModal";
 import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches } from "../../../services/companyService";
+import { set } from "date-fns";
 
 ChartJS.register(
   ArcElement,
@@ -53,7 +55,7 @@ function Dashboard() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [recentComments, setRecentComments] = useState([]);
   const [distribution, setDistribution] = useState({
     1: 0,
@@ -66,6 +68,7 @@ function Dashboard() {
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLogout, setIsLogout] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -83,7 +86,7 @@ function Dashboard() {
         if (!retrievedCompanyData) return;
 
         setCompanyData(retrievedCompanyData);
-        console.log(retrievedCompanyData);
+        console.log('Service Points + Criteria:', retrievedCompanyData);
       } catch (err) {
         setError(err.message);
       }
@@ -255,7 +258,8 @@ function Dashboard() {
 
     // Fetch all users/raters
     async function fetchUsers() {
-      const raters = await getAllUsersByCompanyId(user?.id);
+      const companyId = user?.id;
+      const raters = await getAllUsersByCompanyBranchId(companyId, null);
       if (!raters) return;
 
       setUsers(raters);
@@ -269,8 +273,42 @@ function Dashboard() {
     fetchCompanyBranches();
   }, [user]);
 
-  const handleTest = () => {
-    console.log(companyData);
+  const handleLogout = async () => {
+    setIsLogout(true);
+    try {
+      await logout();
+      setCompanyData(null);
+      setRatings([]);
+      setComments([]);
+      setOtherData([]);
+      setTotalRatings(0);
+      setAverageRating(0);
+      setUsers([]);
+      setBranches([]);
+      setSelectedBranchId("");
+      setDistribution({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+      setError(null);
+      setRecentComments([]);
+      setSuggestions([]);
+      setActiveTab("overview");
+    }
+    catch (error) {
+      console.error("Logout Error:", error);
+      setError("Failed to logout. Please try again.");
+      setIsLogout(false);
+    } finally {
+      // clear localStorage
+      localStorage.removeItem("company_id");
+      localStorage.removeItem("branch_id");
+      localStorage.removeItem("company_logo_base64");
+      localStorage.removeItem("cachedDepartments");
+      localStorage.removeItem("cachedBranches");
+      // go to login page
+      setTimeout(() => {
+        setIsLogout(false);
+        window.location.href = "/login";
+      }, 3000);
+    }
   };
 
   const activeServicePoints = companyData?.CompanyServicePoints?.filter((sp) => sp.isActive).length || 0;
@@ -564,7 +602,7 @@ function Dashboard() {
               </button>
 
               <button
-                onClick={handleTest}
+                onClick={handleLogout}
                 className="flex items-center px-4 py-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors"
               >
                 <LogOut className="h-5 w-5 mr-2" />
@@ -1224,6 +1262,13 @@ function Dashboard() {
         onSave={handleSaveBranch}
         isSubmiting={isLoading}
         servicePoints={companyData?.CompanyServicePoints}
+      />
+
+      <LoadingModal
+        isOpen={isLogout}
+        onClose={() => setIsLogout(false)}
+        action={"Logging out"}
+        isLoading={isLogout}
       />
     </div>
   );

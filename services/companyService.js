@@ -7,7 +7,7 @@ export const fetchCompanyDepartments = async (company_id) => {
     .eq("company_id", company_id);
 
   if (error) {
-    console.error("Supabase fetch error:", error);
+    console.error("Supabase fetch error:", error.message);
     return [];
   }
 
@@ -73,24 +73,23 @@ export const getCompanyServicePointCriteria = async (companyId) => {
   const { data, error } = await supabase
     .from('Companies')
     .select(`
-    *,
-    CompanyServicePoints (
       *,
-      ServicePointRatingCriteria (
-        RatingCriteria:rating_criteria_id (
-          id,
-          title
+      CompanyServicePoints (
+        *,
+        ServicePointRatingCriteria (
+          RatingCriteria:rating_criteria_id (
+            id,
+            title
+          )
         )
       )
-    )
-  `)
+    `)
     .eq('id', companyId)
     .single()
 
-
   if (error) {
-    console.error('Error finding service point request:', servicePointError.message);
-    throw servicePointError;
+    console.error('Error finding service point request:', error.message);
+    throw error;
   }
 
   return data;
@@ -152,7 +151,27 @@ export const fetchBranches = async (companyId) => {
     return;
   }
 
-  console.log('Grouped data for company:', data);
+  console.log('Company Branches + Service Points + Criteria:', data);
+
+  return data;
+}
+
+export const getBranchByBarCode = async (branchCode, companyId) => {
+  if (!companyId) return;
+
+  const { data, error } = await supabase
+    .from('Branches')
+    .select('id, branch_code, branch_name')
+    .eq('company_id', companyId)
+    .eq('branch_code', branchCode)
+    .single();
+
+  if (error) {
+    console.error('Error fetching branch data:', error.message);
+    return;
+  }
+
+  console.log('Branch By Branch Code', data);
 
   return data;
 }

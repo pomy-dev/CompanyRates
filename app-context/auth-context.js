@@ -2,8 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../services/supabaseService";
-import { createRatingCriteria, insertServicePoint, createServicePoint_RatingCriteria } from '../services/companyService'
-import { elements } from "chart.js";
+import { createRatingCriteria, insertServicePoint, createServicePoint_RatingCriteria } from '../services/companyService';
 
 const AuthContext = createContext();
 
