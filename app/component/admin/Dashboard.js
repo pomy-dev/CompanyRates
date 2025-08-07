@@ -29,7 +29,6 @@ import {
 } from "chart.js";
 import { Pie, Bar } from "react-chartjs-2";
 import BranchModal from "./BranchModal";
-import { mockBranches } from "../../../utils/data";
 import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches } from "../../../services/companyService";
 
 ChartJS.register(
