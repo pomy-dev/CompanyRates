@@ -1,11 +1,11 @@
 "use client";
+
 import { useRouter } from "next/navigation";
 import {
   Star,
   ArrowRight,
   Menu,
   Building2,
-  Boxes,
   Heart,
   Users,
   TrendingUp,
@@ -15,9 +15,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import { fetchCompanyDepartments } from "../../services/companyService";
-import { getIconForDepartment } from "../../utils/iconSelector";
+import { fetchBranchSummary } from "../../services/companyService";
 import { Button } from "../components/ui/button";
+import { getIconForDepartment } from "../../utils/iconSelector";
 import { Card, CardContent, } from "../components/ui/card";
 import {
   DropdownMenu,
@@ -34,36 +34,44 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import { useNotification } from "../components/ui/notification";
+import { DialogDescription } from "@radix-ui/react-dialog";
 
 function WelcomeScreen() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const [companyLogo, setCompanyLogo] = useState(null);
-
   //global  data context :
   const { setData } = useDataContext();
-
   //show dailog :
   const [showDialog, setShowDialog] = useState(false);
   const { notification } = useNotification();
 
-  const fetchAndCacheDepartments = async () => {
+  const fetchBranchComponents = async () => {
     const company_id = localStorage.getItem("company_id");
-    const departments = await fetchCompanyDepartments(company_id);
+    const branch_id = localStorage.getItem("branch_id");
 
-    const enriched = departments.map((item) => ({
-      servicePointId:item.service_point_id,
-      name: item.servicepoint,
-      department: item.department,
-      servicePoint: item.servicepoint,
-      iconName: getIconForDepartment(item.department).iconName, // Save icon name
-      companyId: item.company_id,
-      isActive:item.isActive,
-      ratingCriteria: item.rating_criteria,
-    }));
+    if (!company_id || !branch_id) return;
+    console.log("Fetching Branch Components for Company ID:", company_id, "Branch ID:", branch_id);
 
-    localStorage.setItem("cachedDepartments", JSON.stringify(enriched));
+    // Fetch company logo from local storage
+    const branchSummary = await fetchBranchSummary(company_id, branch_id);
+
+    const branchServicePoints = branchSummary?.service_points?.map((item) => ({
+      servicePointId: item?.service_point_id,
+      name: item?.servicePoint,
+      department: item?.department,
+      servicePoint: item?.servicePoint,
+      iconName: getIconForDepartment(item?.department).iconName,
+      companyId: item?.companyId,
+      isActive: item?.isActive,
+      ratingCriteria: item?.rating_criteria?.map((c) => ({
+        criteriaId: c?.id,
+        criteriaTitle: c?.criterion
+      }))
+    })) || [];
+
+    localStorage.setItem("cachedServicePoints", JSON.stringify(branchServicePoints));
   };
 
   useEffect(() => {
@@ -73,7 +81,7 @@ function WelcomeScreen() {
     }
 
     if (!localStorage?.getItem("cachedDepartments")) {
-      fetchAndCacheDepartments();
+      fetchBranchComponents();
     }
   }, []);
 
@@ -141,6 +149,7 @@ function WelcomeScreen() {
               width={40}
               height={40}
               unoptimized
+              style={{ width: 'auto' }}
             />
           ) : (
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -162,7 +171,7 @@ function WelcomeScreen() {
             >
               <Menu className="w-5 h-5" />
             </Button>
-            
+
           </DropdownMenuTrigger>
 
           <DropdownMenuContent className="w-48" align="end">
@@ -284,7 +293,7 @@ function WelcomeScreen() {
               How would you like to proceed with your rating?
             </p>
           </DialogHeader>
-
+          <DialogDescription></DialogDescription>
           <div className="flex flex-col gap-4 mt-6">
             <Button
               onClick={handleRateNow}

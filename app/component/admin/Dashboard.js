@@ -31,7 +31,6 @@ import { Pie, Bar } from "react-chartjs-2";
 import BranchModal from "./BranchModal";
 import LoadingModal from "./loadingModal";
 import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches } from "../../../services/companyService";
-import { set } from "date-fns";
 
 ChartJS.register(
   ArcElement,
@@ -86,7 +85,7 @@ function Dashboard() {
         if (!retrievedCompanyData) return;
 
         setCompanyData(retrievedCompanyData);
-        console.log('Service Points + Criteria:', retrievedCompanyData);
+        // console.log('Service Points + Criteria:', retrievedCompanyData);
       } catch (err) {
         setError(err.message);
       }

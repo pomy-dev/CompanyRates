@@ -1,19 +1,5 @@
 import { supabase } from './supabaseService';
 
-export const fetchCompanyDepartments = async (company_id) => {
-  const { data, error } = await supabase
-    .from('service_point_criteria_view')
-    .select("*")
-    .eq("company_id", company_id);
-
-  if (error) {
-    console.error("Supabase fetch error:", error.message);
-    return [];
-  }
-
-  return data;
-};
-
 export const insertServicePoint = async (companyId, servicePoint) => {
   const { data, error } = await supabase
     .from('CompanyServicePoints')
@@ -156,8 +142,25 @@ export const fetchBranches = async (companyId) => {
   return data;
 }
 
+export const fetchBranchSummary = async (companyId, branchId) => {
+  if (!companyId || !branchId) {
+    throw new Error('Something went, Company/Branch Id is missing');
+  }
+
+  // Retrieve branches' services points and criteria
+  const { data, error } = await supabase
+    .rpc('get_branch_summary', { p_company_id: companyId, p_branch_id: parseInt(branchId) });
+
+  if (error) {
+    console.error('Error fetching branch summary data:', error.message);
+    return;
+  }
+
+  return data[0];
+}
+
 export const getBranchByBarCode = async (branchCode, companyId) => {
-  if (!companyId) return;
+  if (!companyId || !branchCode) return;
 
   const { data, error } = await supabase
     .from('Branches')

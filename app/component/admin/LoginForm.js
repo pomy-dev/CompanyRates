@@ -95,9 +95,9 @@ function LoginForm() {
       });
 
       if (!data) return;
-      const branch = getBranchByBarCode(formData?.branchCode?.trim(), data?.user?.id);
+      const branch = await getBranchByBarCode(formData?.branchCode?.trim(), data?.user?.id);
 
-      if (branch) localStorage.setItem("branch_id", branch.id);
+      if (branch) localStorage.setItem("branch_id", branch?.id);
 
       alert("Login Successful!");
       await fetchLogoPathAndCache();
@@ -151,6 +151,7 @@ function LoginForm() {
                 width={80}
                 height={80}
                 className="object-contain rounded-full elevation-2 shadow-lg"
+                style={{ width: 'auto' }}
               />
             ) : (
               <div className="w-full h-full bg-blue-100 rounded-full flex items-center justify-center">

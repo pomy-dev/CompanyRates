@@ -1,10 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, ArrowRight, X, Star, Clock, Phone, Mail } from "lucide-react";
-import Image from "next/image";
-import ratenow from "../../assets/images/ratenow.png";
-import ratelater from "../../assets/images/ratelater.png";
+import { User, ArrowRight, Phone, Mail } from "lucide-react";
 import { useDataContext } from "../data-context";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -17,7 +14,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
@@ -32,12 +28,11 @@ import {
   insertOther,
 } from "../../services/ratingService";
 import { supabase } from "../../services/supabaseService";
+import { DialogDescription } from "@radix-ui/react-dialog";
 
 function UserDetailsScreen() {
   const router = useRouter();
-  const [phone, setPhone] = useState("");
   const [showDialog, setShowDialog] = useState(false);
-  // const { user } = useAuth()
 
   //global  data context :
   const { data, setData } = useDataContext();
@@ -108,9 +103,7 @@ function UserDetailsScreen() {
 
       try {
         const data = await insertUser(userInfo);
-
         if (!data) return;
-
         return data;
       } catch (error) {
         console.error("Failed to insert user:", error);
@@ -123,19 +116,19 @@ function UserDetailsScreen() {
     }
   };
 
-  const sendFeedBack = async (userId, rateID) => {
+  const sendFeedBack = async (userId, branchId) => {
     const newFeedback = {
       user_id: userId,
       comments: !isEmptyObject(data.comments) ? data.comments : null,
       suggestions: data.suggestionBox ? data.suggestionBox : null,
-      ratingId: rateID ? rateID : null,
+      ratingId: null,
       company_id: company_id,
-      branch_id: branch_id || null,
+      branch_id: branchId
     };
 
     try {
-      const result2 = await insertFeedback(newFeedback);
-      result2 && console.log(`FeedBackData: ${result2}`);
+      const result = await insertFeedback(newFeedback);
+      result && console.log('FeedBackData:', result);
     } catch (error) {
       console.error("Failed to insert feedback:", error);
     }
@@ -144,26 +137,33 @@ function UserDetailsScreen() {
   const submitData = async () => {
     try {
 
-      const user = (!isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)) ? await sendUser('both') : (!isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)) ? await sendUser('suggestion_only') : await sendUser('rating_only');
-      user && console.log(`User Id from DB: ${user?.id}`);
+      const user = (!isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox))
+        ? await sendUser('both') :
+        (!isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings))
+          ? await sendUser('suggestion_only') : await sendUser('rating_only');
+      user && console.log('User from DB:', user);
 
       if (user) {
         setShowDialog(true);
-        if (!isEmptyObject(data.ratings)) {
-          try {
-            const ratingJson = data.formartedRatings;
+
+        if (!isEmptyObject(data?.ratings)) {
+          const formatted_ratings = [{
             
-            let { error } = await supabase.rpc(
-              "insert_multiple_ratings",
-              {
-                p_company_id: company_id,
-                p_branch_id: branch_id,
-                p_ratings: ratingJson,
-                p_service_point: data.servicePoint.name,
-                p_sms: false,
-                p_user_id: user?.id,
-              }
-            );
+          }]
+
+          const ratings_data = {
+            p_company_id: company_id,
+            p_branch_id: branch_id,
+            p_ratings: data?.ratings,
+            p_service_point: data?.servicePoint?.name,
+            p_sms: false,
+            p_user_id: user?.id,
+          }
+
+          console.log('p_ratings', JSON.stringify(ratings_data.p_ratings, null, 2));
+
+          try {
+            let { error } = await supabase.rpc("insert_multiple_ratings", ratings_data);
 
             if (error) throw error;
 
@@ -172,20 +172,22 @@ function UserDetailsScreen() {
             console.error("Failed to insert ratings:", error.message);
             notification.error("Failed to submit ratings");
           }
+
         } else {
           if (!isEmptyObject(data.suggestionBox)) {
+
             try {
-              sendFeedBack(user?.id);
+              sendFeedBack(user?.id, user?.branch_id);
               notification.success("suggestion has been sent");
             } catch (error) {
               console.error("Failed to insert otherCriterion Data:", error);
               notification.error("Failed to submit other-criterion rating");
             }
-          }
 
+          }
         }
 
-        if (!isEmptyObject(data.otherCriteria)) {
+        if (!isEmptyObject(data.otherCriteria) && data.otherCriteria?.otherRating !== 0) {
           try {
             const otherCriterion = {
               user_id: user?.id,
@@ -193,11 +195,14 @@ function UserDetailsScreen() {
               ratings: data.otherCriteria?.otherRating,
               comments: data.otherCriteria?.otherReason,
               company_id: company_id,
-              branch_id: branch_id || null,
+              branch_id: user?.branch_id,
               department: data.otherCriteria?.otherDepartment,
             };
+
             const otherData = await insertOther(otherCriterion);
-            otherData && console.log(`Other Criterion data: ${otherData}`);
+
+            otherData && console.log('Other Criterion data:', otherData);
+
           } catch (error) {
             console.error("Failed to insert otherCriterion Data:", error);
             notification.error("Failed to submit other-criterion rating");
@@ -216,6 +221,7 @@ function UserDetailsScreen() {
       console.error("Error inserting user:", error);
       notification.error("Something went wrong. Please try again.");
     } finally {
+      cleaner();
       setTimeout(() => {
         setShowDialog(false);
       }, 2000);
@@ -328,6 +334,7 @@ function UserDetailsScreen() {
               </AvatarFallback>
             </Avatar>
             <DialogTitle></DialogTitle>
+            <DialogDescription></DialogDescription>
 
             {/* Success Message */}
             <h3 className="text-3xl font-bold text-slate-800 mb-4">

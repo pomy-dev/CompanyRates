@@ -16,6 +16,7 @@ import { Card, CardContent } from "../components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
@@ -87,7 +88,7 @@ function SelectRatings() {
           otherCriteria?.otherValue &&
           otherCriteria?.otherRating &&
           !newRatings[
-            `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
+          `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
           ]
         ) {
           newRatings[
@@ -128,7 +129,7 @@ function SelectRatings() {
       if (otherCriteria?.otherValue) {
         delete filteredRatings[
           `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
-        ]; // Ensure 'Other' is not included
+        ];
       }
 
       setData((prev) => {
@@ -165,7 +166,7 @@ function SelectRatings() {
     if (
       otherCriteria?.otherValue &&
       commentModal.criterion ===
-        `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
+      `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`
     ) {
       // Update otherCriteria.otherReason
       const updated = {
@@ -200,25 +201,24 @@ function SelectRatings() {
     if (!selectedCriteria || selectedCriteria.length === 0 || !ratings)
       return mappedRatings;
 
-    const cachedDepartments = JSON.parse(
-      localStorage?.getItem("cachedDepartments") || "[]"
+    const cachedBranchServicePoints = JSON.parse(
+      localStorage?.getItem("cachedServicePoints") || "[]"
     );
 
     selectedCriteria.forEach((criterionTitle) => {
       let found = false;
 
-      for (const department of cachedDepartments) {
-        const matchedCriterion = department.ratingCriteria?.find(
+      for (const servicePoint of cachedBranchServicePoints) {
+        const matchedCriterion = servicePoint?.ratingCriteria?.find(
           (c) =>
-            c.title?.trim().toLowerCase() ===
-            criterionTitle.trim().toLowerCase()
+            c.criteriaTitle?.trim()?.toLowerCase() === criterionTitle?.trim()?.toLowerCase()
         );
 
         if (matchedCriterion) {
           const score = ratings[criterionTitle];
           if (score !== undefined) {
             mappedRatings.push({
-              rating_criteria_id: matchedCriterion.id,
+              rating_criteria_id: matchedCriterion.criteriaId,
               score,
             });
           }
@@ -247,7 +247,7 @@ function SelectRatings() {
     (criterion) =>
       (!otherCriteria?.otherValue ||
         criterion !==
-          `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`) &&
+        `Other: ${otherCriteria.otherValue.substring(0, 5) + "..."}`) &&
       (!ratings[criterion] || ratings[criterion] === 0)
   );
 
@@ -302,11 +302,10 @@ function SelectRatings() {
                     <FaStar
                       key={index}
                       size={30}
-                      className={`cursor-pointer transition-all duration-200 hover:scale-110 ${
-                        index <= ratings[criterion]
-                          ? "text-yellow-400"
-                          : "text-slate-300"
-                      }`}
+                      className={`cursor-pointer transition-all duration-200 hover:scale-110 ${index <= ratings[criterion]
+                        ? "text-yellow-400"
+                        : "text-slate-300"
+                        }`}
                       onClick={() => handleRating(criterion, index)}
                     />
                   ))}
@@ -339,11 +338,10 @@ function SelectRatings() {
             <Button
               onClick={handleNext}
               disabled={isNextDisabled}
-              className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 ${
-                isNextDisabled
-                  ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-              }`}
+              className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 ${isNextDisabled
+                ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                }`}
             >
               Continue
               <FiArrowRight className="w-5 h-5" />
@@ -365,6 +363,7 @@ function SelectRatings() {
               Comment on {commentModal.criterion}
             </DialogTitle>
           </DialogHeader>
+          <DialogDescription></DialogDescription>
           <Textarea
             value={commentModal.text}
             onChange={handleCommentChange}

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+
 import { useRouter } from "next/navigation";
 import { FiArrowLeft } from "react-icons/fi";
 //local modules
@@ -10,10 +10,7 @@ import { Textarea } from "../components/ui/textarea";
 import { MessageSquare } from "lucide-react";
 
 const Feedback = () => {
-  const [showPopup, setShowPopup] = useState(false);
   const router = useRouter();
-  const company_id = localStorage.getItem('company_id')
-
   const { data, setData } = useDataContext();
   const { suggestionBox, criteria } = data;
 
@@ -21,8 +18,6 @@ const Feedback = () => {
     const { name, value } = e.target;
     setData((prevData) => ({ ...prevData, [name]: value }));
   };
-
-
 
   const submitData = async () => {
     router.push("/user-details");

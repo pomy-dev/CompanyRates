@@ -39,7 +39,7 @@ export const getAllUsersByCompanyBranchId = async (companyId, branchId) => {
  * @returns {Promise<Object>} - The result of the insert operation, including data or error.
  */
 export const insertFeedback = async (feedbackData) => {
-  const { user_id, comments, suggestions, ratingId, company_id } = feedbackData;
+  const { user_id, comments, suggestions, ratingId, company_id, branch_id } = feedbackData;
 
   const { data, error } = await supabase
     .from('feedback')
@@ -50,6 +50,7 @@ export const insertFeedback = async (feedbackData) => {
         suggestions: suggestions,
         rating_id: ratingId,
         company_id: company_id,
+        branch_id: branch_id
       },
     ])
     .select();
@@ -71,6 +72,7 @@ export const insertFeedback = async (feedbackData) => {
  * @param {string} otherData.ratings - The ratings associated with the entry.
  * @param {string} otherData.comments - Comments related to the entry.
  * @param {string} otherData.company_id - The UUID of the company.
+ * @param {number} otherData.branch_id - The id branch of the company.
  * 
  * @returns {Promise<Object>} - The result of the insert operation, including data or error.
  */
@@ -84,15 +86,16 @@ export const insertOther = async (otherData) => {
         ratings: otherData?.ratings,
         comments: otherData?.comments,
         department: otherData?.department,
-        company_id: otherData?.company_id
+        company_id: otherData?.company_id,
+        branch_id: otherData?.branch_id
       }
     ])
     .select();
 
   if (error) {
     console.error('Error inserting into other table:', error);
-    throw error; // Rethrow the error for handling in the calling function
+    throw error;
   }
 
-  return data; // Return the inserted data
+  return data;
 };
