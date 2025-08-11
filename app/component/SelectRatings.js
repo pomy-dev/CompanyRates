@@ -218,8 +218,8 @@ function SelectRatings() {
           const score = ratings[criterionTitle];
           if (score !== undefined) {
             mappedRatings.push({
-              rating_criteria_id: matchedCriterion.criteriaId,
-              score,
+              rating_criteria_id: matchedCriterion?.criteriaId,
+              score: score,
             });
           }
           found = true;

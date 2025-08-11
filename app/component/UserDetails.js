@@ -147,20 +147,15 @@ function UserDetailsScreen() {
         setShowDialog(true);
 
         if (!isEmptyObject(data?.ratings)) {
-          const formatted_ratings = [{
-            
-          }]
 
           const ratings_data = {
             p_company_id: company_id,
             p_branch_id: branch_id,
-            p_ratings: data?.ratings,
+            p_ratings: data?.formartedRatings,
             p_service_point: data?.servicePoint?.name,
             p_sms: false,
             p_user_id: user?.id,
           }
-
-          console.log('p_ratings', JSON.stringify(ratings_data.p_ratings, null, 2));
 
           try {
             let { error } = await supabase.rpc("insert_multiple_ratings", ratings_data);
@@ -173,17 +168,15 @@ function UserDetailsScreen() {
             notification.error("Failed to submit ratings");
           }
 
-        } else {
-          if (!isEmptyObject(data.suggestionBox)) {
+        }
 
-            try {
-              sendFeedBack(user?.id, user?.branch_id);
-              notification.success("suggestion has been sent");
-            } catch (error) {
-              console.error("Failed to insert otherCriterion Data:", error);
-              notification.error("Failed to submit other-criterion rating");
-            }
-
+        if (!isEmptyObject(data.suggestionBox)) {
+          try {
+            sendFeedBack(user?.id, user?.branch_id);
+            notification.success("suggestion has been sent");
+          } catch (error) {
+            console.error("Failed to insert otherCriterion Data:", error);
+            notification.error("Failed to submit other-criterion rating");
           }
         }
 

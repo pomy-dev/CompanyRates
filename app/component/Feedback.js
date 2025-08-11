@@ -20,6 +20,7 @@ const Feedback = () => {
   };
 
   const submitData = async () => {
+    console.log("Submitting data:", data?.formartedRatings);
     router.push("/user-details");
   }
 
@@ -86,7 +87,6 @@ const Feedback = () => {
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 };
