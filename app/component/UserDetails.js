@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { User, ArrowRight, Phone, Mail } from "lucide-react";
@@ -170,7 +171,7 @@ function UserDetailsScreen() {
 
         }
 
-        if (!isEmptyObject(data.suggestionBox)) {
+        if (!isEmptyObject(data.suggestionBox) || !isEmptyObject(data.comments)) {
           try {
             sendFeedBack(user?.id, user?.branch_id);
             notification.success("suggestion has been sent");

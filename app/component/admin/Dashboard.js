@@ -104,10 +104,13 @@ function Dashboard() {
 
     // Fetch ratings from the ratings table
     async function fetchRatings() {
+      const branch_id = localStorage.getItem('branch_id') || "";
+
       const { data, error } = await supabase
         .from("ratings")
         .select("*")
-        .eq("company_id", user?.id);
+        .eq("company_id", user?.id)
+        .eq('branch_id', branch_id);
 
       if (error) {
         setError(error?.message);
@@ -116,38 +119,30 @@ function Dashboard() {
 
       if (!data) return;
 
-      setRatings(data); // store full ratings
+      setRatings(data);
 
-      // Calculate distribution
       const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
       let totalSum = 0;
       let totalCount = 0;
 
       data?.forEach((r) => {
-        if (!r?.rating) return;
+        if (!r?.score) return;
 
-        let ratingObj;
+        let score;
 
         try {
-          ratingObj =
-            typeof r.rating === "string" ? JSON.parse(r.rating) : r.rating;
+          score = typeof r.score === "string" ? Int.parse(r.score) : r.score;
         } catch (error) {
-          console.warn("Invalid rating JSON:", r.rating);
+          console.warn("Invalid rating score interger:", r.score);
           return;
         }
 
-        if (!ratingObj || typeof ratingObj !== "object") return;
+        if (!score || typeof score !== "number") return;
 
-        const scores = Object.values(ratingObj).filter(
-          (n) => typeof n === "number"
-        );
-
-        scores?.forEach((score) => {
-          const rounded = Math.round(score);
-          if (distribution[rounded] !== undefined) distribution[rounded]++;
-          totalSum += score;
-          totalCount++;
-        });
+        const rounded = Math.round(score);
+        if (distribution[rounded] !== undefined) distribution[rounded]++;
+        totalSum += score;
+        totalCount++;
 
       });
 
@@ -321,7 +316,14 @@ function Dashboard() {
     ).length
     : 0;
 
-  const pendingSuggestions = comments.length || 0;
+  const totalSuggestion = Array.isArray(comments)
+    ? comments.filter(
+      (c) =>
+        c.suggestions &&
+        typeof c.suggestions === "string" &&
+        c.suggestions.trim() !== ""
+    ).length
+    : 0;
 
   const getFilteredRatings = (data, category, search) => {
     let filtered = data || [];
@@ -661,7 +663,7 @@ function Dashboard() {
                 <p className="text-2xl font-bold text-gray-900">
                   {totalComments}
                 </p>
-                <p className="text-xs text-gray-500">user feedback</p>
+                <p className="text-xs text-gray-500">criteria comments</p>
               </div>
             </div>
           </div>
@@ -676,7 +678,7 @@ function Dashboard() {
                   Suggested Ideas
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {pendingSuggestions}
+                  {totalSuggestion}
                 </p>
                 <p className="text-xs text-gray-500">suggestions</p>
               </div>
@@ -715,7 +717,7 @@ function Dashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Feedback Distribution
+                      Users' Actions
                     </h3>
                     <div className="w-full max-w-xs mx-auto">
                       <Pie
