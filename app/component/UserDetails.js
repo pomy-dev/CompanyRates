@@ -211,6 +211,7 @@ function UserDetailsScreen() {
       } else {
         console.log("User details could not be determined");
       }
+      
     } catch (error) {
       console.error("Error inserting user:", error);
       notification.error("Something went wrong. Please try again.");

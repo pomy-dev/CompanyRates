@@ -52,7 +52,7 @@ function WelcomeScreen() {
     const branch_id = localStorage.getItem("branch_id");
 
     if (!company_id || !branch_id) return;
-    console.log("Fetching Branch Components for Company ID:", company_id, "Branch ID:", branch_id);
+    // console.log("Fetching Branch Components for Company ID:", company_id, "Branch ID:", branch_id);
 
     // Fetch company logo from local storage
     const branchSummary = await fetchBranchSummary(company_id, branch_id);

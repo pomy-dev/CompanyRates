@@ -137,7 +137,7 @@ export const fetchBranches = async (companyId) => {
     return;
   }
 
-  console.log('Company Branches + Service Points + Criteria:', data);
+  // console.log('Company Branches + Service Points + Criteria:', data);
 
   return data;
 }
@@ -174,7 +174,26 @@ export const getBranchByBarCode = async (branchCode, companyId) => {
     return;
   }
 
-  console.log('Branch By Branch Code', data);
+  // console.log('Branch By Branch Code', data);
 
+  return data;
+}
+
+export const getRatingsByCriteriaIds = async (criteriaIds, branchId, companyId) => {
+  if (!criteriaIds || criteriaIds.length === 0) return [];
+
+  // 3. Fetch all ratings in one query filtered by company + branch
+  const { data, error } = await supabase
+    .from("ratings")
+    .select("rating_criteria_id, score")
+    .eq("company_id", companyId)
+    .eq("branch_id", branchId)
+    .in("rating_criteria_id", criteriaIds);
+
+  if (error) {
+    console.error("Error fetching ratings:", error);
+    return;
+  }
+  console.log(data)
   return data;
 }

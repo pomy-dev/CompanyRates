@@ -30,7 +30,7 @@ import {
 import { Pie, Bar } from "react-chartjs-2";
 import BranchModal from "./BranchModal";
 import LoadingModal from "./loadingModal";
-import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches } from "../../../services/companyService";
+import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches, getRatingsByCriteriaIds } from "../../../services/companyService";
 
 ChartJS.register(
   ArcElement,
@@ -86,8 +86,44 @@ function Dashboard() {
 
         if (!retrievedCompanyData) return;
 
-        setCompanyData(retrievedCompanyData);
-        // console.log('Service Points + Criteria:', retrievedCompanyData);
+        const allCriteriaIds = retrievedCompanyData.CompanyServicePoints.flatMap(
+          (sp) => sp.ServicePointRatingCriteria.map(
+            (c) => c.RatingCriteria.id
+          )
+        );
+
+        // Get ratings for all criteria IDs of this service point
+        const ratings = await getRatingsByCriteriaIds(allCriteriaIds, companyId, Int.parse(branchId));
+
+        const updatedServicePoints = await Promise.all(
+          retrievedCompanyData.CompanyServicePoints.map(async (sp) => {
+            const criteriaIds = sp.ServicePointRatingCriteria.map(
+              (c) => c.RatingCriteria.id
+            );
+
+            const servicePointRatings = ratings.filter((r) =>
+              criteriaIds.includes(r.rating_criteria_id)
+            );
+
+            let average = null;
+            if (servicePointRatings.length > 0) {
+              const total = servicePointRatings.reduce((sum, r) => sum + r.score, 0);
+              average = total / servicePointRatings.length;
+            }
+
+            return {
+              ...sp,
+              averageRating: average, // merged value
+            };
+          }));
+
+        const companyWithRatings = {
+          ...retrievedCompanyData,
+          CompanyServicePoints: updatedServicePoints,
+        };
+
+        setCompanyData(companyWithRatings);
+        // console.log("Service Points + Average Ratings:", companyWithRatings);
       } catch (err) {
         setError(err.message);
       }
@@ -161,7 +197,7 @@ function Dashboard() {
         .from("ratings")
         .select("id, user_id")
         .eq("company_id", user?.id)
-        .eq("branch_id", selectedBranchId);
+        .eq("branch_id", branchId);
 
       if (ratingsError) {
         setError(ratingsError.message);
@@ -172,7 +208,7 @@ function Dashboard() {
         .from("feedback")
         .select("*")
         .eq("company_id", user?.id)
-        .eq("branch_id", selectedBranchId);
+        .eq("branch_id", branchId);
 
       if (error) {
         setError(error.message);
@@ -869,14 +905,14 @@ function Dashboard() {
                   </h3>
                   <span className="text-sm text-gray-600">
                     {activeServicePoints} active of{" "}
-                    {companyData?.servicePoints?.length} total
+                    {companyData?.CompanyServicePoints?.length} total
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {companyData?.servicePoints?.map((servicePoint) => {
+                  {companyData?.CompanyServicePoints?.map((servicePoint) => {
                     // Filter ratings for this specific service point
                     const serviceRatings = ratings.filter(
-                      (r) => r.service_point === servicePoint.name
+                      (r) => r.servicepoint === servicePoint.servicepoint
                     );
                     // Aggregate all criteria scores for this service point
                     let totalScore = 0;
@@ -904,7 +940,7 @@ function Dashboard() {
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <h4 className="font-semibold text-gray-900">
-                              {servicePoint.name}
+                              {servicePoint.servicepoint}
                             </h4>
                             <p className="text-sm text-gray-600">
                               {servicePoint.department}
@@ -1077,7 +1113,7 @@ function Dashboard() {
                   </select>
                 </div>
 
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 space-y-4">
                   {getFilteredFeedback(
                     recentComments,
                     filterCategory,
@@ -1095,8 +1131,8 @@ function Dashboard() {
                           <p className="text-sm text-gray-600">
                             {comment.phone_number}
                           </p>
-                          <p className="text-xs text-blue-600">
-                            Service Point:{" "}
+                          <p className="text-xs text-slate-400">
+                            <span className="font-semibold text-slate-500">Service Point:{" "}</span>
                             {getServicePointByRatingId(comment.rating_id)}
                           </p>
                         </div>
@@ -1106,14 +1142,30 @@ function Dashboard() {
                           </p>
                         </div>
                       </div>
-                      <ul className="text-gray-700">
-                        {comment.categories.map((cat, i) => (
-                          <li key={i}>
-                            <span className="font-medium">{cat.category}:</span>
-                            <span className="ml-2">{cat.content}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead>
+                          <tr>
+                            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 border-b">
+                              Criteria
+                            </th>
+                            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 border-b">
+                              Comment
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {comment.categories.map((cat, i) => (
+                            <tr key={cat.id} className="border-b">
+                              <td className="px-4 py-2 font-semibold text-xs">{cat.category}</td>
+                              <td className="px-4 py-2">
+                                <div className="px-2 py-1 rounded-lg text-xs bg-green-100 text-green-800">
+                                  {cat.content}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   ))}
                 </div>
