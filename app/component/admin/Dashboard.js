@@ -93,7 +93,7 @@ function Dashboard() {
         );
 
         // Get ratings for all criteria IDs of this service point
-        const ratings = await getRatingsByCriteriaIds(allCriteriaIds, companyId, Int.parse(branchId));
+        const ratings = await getRatingsByCriteriaIds(allCriteriaIds, branchId);
 
         const updatedServicePoints = await Promise.all(
           retrievedCompanyData.CompanyServicePoints.map(async (sp) => {
@@ -156,7 +156,7 @@ function Dashboard() {
       }
 
       if (!data) return;
-
+      console.log('Ratings Data:', data);
       setRatings(data);
 
       const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
@@ -406,7 +406,7 @@ function Dashboard() {
     let suggestionData = data || [];
 
     if (search) {
-      suggestionData = suggestionData.filter((item) =>
+      suggestionData = suggestions.filter((item) =>
         JSON.stringify(item).toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -912,25 +912,8 @@ function Dashboard() {
                   {companyData?.CompanyServicePoints?.map((servicePoint) => {
                     // Filter ratings for this specific service point
                     const serviceRatings = ratings.filter(
-                      (r) => r.servicepoint === servicePoint.servicepoint
+                      (r) => r.service_point === servicePoint.servicepoint
                     );
-                    // Aggregate all criteria scores for this service point
-                    let totalScore = 0;
-                    let totalCount = 0;
-                    serviceRatings.forEach((r) => {
-                      const ratingObj =
-                        typeof r.rating === "string"
-                          ? JSON.parse(r.rating)
-                          : r.rating;
-                      Object.values(ratingObj).forEach((val) => {
-                        if (typeof val === "number") {
-                          totalScore += val;
-                          totalCount++;
-                        }
-                      });
-                    });
-                    const avgRating =
-                      totalCount > 0 ? totalScore / totalCount : 0;
 
                     return (
                       <div
@@ -960,19 +943,14 @@ function Dashboard() {
                             Rating Criteria:
                           </p>
                           <ul className="list-disc list-inside text-sm text-gray-600">
-                            {servicePoint.ratingCriteria.map(
+                            {servicePoint?.ServicePointRatingCriteria?.map(
                               (criterion, index) => (
                                 <li key={index}>
-                                  {criterion.title}
+                                  {criterion?.RatingCriteria?.title}
                                   <span
-                                    className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${criterion.isRequired
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-slate-100 text-slate-800"
-                                      }`}
+                                    className='ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800'
                                   >
-                                    {criterion.isRequired
-                                      ? "Required"
-                                      : "Optional"}
+                                    Required
                                   </span>
                                 </li>
                               )
@@ -980,10 +958,10 @@ function Dashboard() {
                           </ul>
                         </div>
                         <div className="flex justify-between items-center">
-                          {renderStars(avgRating)}
+                          {renderStars(servicePoint?.averageRating || 0)}
                           <span className="text-xs text-gray-500">
-                            {serviceRatings.length}{" "}
-                            {serviceRatings.length === 1 ? "review" : "reviews"}
+                            {serviceRatings?.length}{" "}
+                            {serviceRatings?.length === 1 ? "review" : "reviews"}
                           </span>
                         </div>
                       </div>
@@ -1271,7 +1249,7 @@ function Dashboard() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 space-y-4">
                   {getFilteredSuggestion(suggestions, searchTerm).map(
                     (suggestion, index) => (
                       <div
@@ -1293,9 +1271,11 @@ function Dashboard() {
                             </span>
                           </div>
                         </div>
-                        <p className="text-gray-700 mb-4">
-                          {suggestion.suggestion}
-                        </p>
+                        <div className="bg-green-100 rounded-md p-2 mb-4">
+                          <p className="text-green-600 font-semibold text-xs mb-2">
+                            {suggestion.suggestion}
+                          </p>
+                        </div>
                         <p className="text-xs text-gray-500">
                           Submitted{" "}
                           {new Date(suggestion.date).toLocaleDateString()}
