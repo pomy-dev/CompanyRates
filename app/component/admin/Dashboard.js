@@ -71,6 +71,8 @@ function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
+    const branchId = localStorage.getItem("branch_id") || "";
+    setSelectedBranchId(branchId);
 
     // Fetch company service points with respective criteria
     async function fetchServicePoints() {
@@ -158,7 +160,8 @@ function Dashboard() {
       const { data: ratingsData, error: ratingsError } = await supabase
         .from("ratings")
         .select("id, user_id")
-        .eq("company_id", user?.id);
+        .eq("company_id", user?.id)
+        .eq("branch_id", selectedBranchId);
 
       if (ratingsError) {
         setError(ratingsError.message);
@@ -168,7 +171,8 @@ function Dashboard() {
       const { data, error } = await supabase
         .from("feedback")
         .select("*")
-        .eq("company_id", user?.id);
+        .eq("company_id", user?.id)
+        .eq("branch_id", selectedBranchId);
 
       if (error) {
         setError(error.message);
@@ -208,7 +212,6 @@ function Dashboard() {
           };
         })
         .sort((a, b) => b.date - a.date)
-        .slice(0, 5);
 
       const groupedSuggestions = data
         .filter(
@@ -316,7 +319,7 @@ function Dashboard() {
     ).length
     : 0;
 
-  const totalSuggestion = Array.isArray(comments)
+  const totalSuggestions = Array.isArray(comments)
     ? comments.filter(
       (c) =>
         c.suggestions &&
@@ -346,33 +349,33 @@ function Dashboard() {
   };
 
   const getFilteredFeedback = (data, category, search) => {
-    let filtered = data || [];
+    let commentsData = data || [];
 
     if (category !== "all") {
-      filtered = filtered.filter(
+      commentsData = commentsData.filter(
         (item) => getServicePointByRatingId(item.rating_id) === category
       );
     }
 
     if (search) {
-      filtered = filtered.filter((item) =>
+      commentsData = commentsData.filter((item) =>
         JSON.stringify(item).toLowerCase().includes(search.toLowerCase())
       );
     }
 
-    return filtered;
+    return commentsData;
   };
 
   const getFilteredSuggestion = (data, search) => {
-    let filtered = data || [];
+    let suggestionData = data || [];
 
     if (search) {
-      filtered = filtered.filter((item) =>
+      suggestionData = suggestionData.filter((item) =>
         JSON.stringify(item).toLowerCase().includes(search.toLowerCase())
       );
     }
 
-    return filtered;
+    return suggestionData;
   };
 
   const getServicePointByRatingId = (ratingId) => {
@@ -678,7 +681,7 @@ function Dashboard() {
                   Suggested Ideas
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {totalSuggestion}
+                  {totalSuggestions}
                 </p>
                 <p className="text-xs text-gray-500">suggestions</p>
               </div>
