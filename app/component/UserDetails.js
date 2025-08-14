@@ -12,11 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "../components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Label } from "../components/ui/label";
 import { Alert, AlertDescription } from "../components/ui/alert";
@@ -80,7 +76,7 @@ function UserDetailsScreen() {
       name: data?.username,
       phone: data?.phoneNumber,
       email: data?.email,
-      user_path: user_path || 'rating_only',
+      user_path: user_path || "rating_only",
       company_id: company_id,
       branch_id: branch_id || null,
     };
@@ -124,12 +120,12 @@ function UserDetailsScreen() {
       suggestions: data.suggestionBox ? data.suggestionBox : null,
       ratingId: null,
       company_id: company_id,
-      branch_id: branchId
+      branch_id: branchId,
     };
 
     try {
       const result = await insertFeedback(newFeedback);
-      result && console.log('FeedBackData:', result);
+      result && console.log("FeedBackData:", result);
     } catch (error) {
       console.error("Failed to insert feedback:", error);
     }
@@ -137,17 +133,26 @@ function UserDetailsScreen() {
 
   const submitData = async () => {
     try {
-
-      const user = (!isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox))
-        ? await sendUser('both') :
-        (!isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings))
-          ? await sendUser('suggestion_only') : await sendUser('rating_only');
-      user && console.log('User from DB:', user);
+      const user =
+        !isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)
+          ? await sendUser("both")
+          : !isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)
+          ? await sendUser("suggestion_only")
+          : await sendUser("rating_only");
+      user && console.log("User from DB:", user);
 
       if (user) {
         setShowDialog(true);
 
         if (!isEmptyObject(data?.ratings)) {
+          // const ratings_data = {
+          //   p_company_id: company_id,
+          //   p_branch_id: branch_id,
+          //   p_ratings: data?.formartedRatings,
+          //   p_service_point: data?.servicePoint?.name,
+          //   p_sms: false,
+          //   p_user_id: user?.id,
+          // }
 
           const ratings_data = {
             p_company_id: company_id,
@@ -156,10 +161,17 @@ function UserDetailsScreen() {
             p_service_point: data?.servicePoint?.name,
             p_sms: false,
             p_user_id: user?.id,
-          }
+            p_comments: data?.comments || {},
+            p_suggestions: data?.suggestionBox || null,
+          };
+
+     
 
           try {
-            let { error } = await supabase.rpc("insert_multiple_ratings", ratings_data);
+            let { error } = await supabase.rpc(
+              "insert_multiple_ratings",
+              ratings_data
+            );
 
             if (error) throw error;
 
@@ -168,10 +180,11 @@ function UserDetailsScreen() {
             console.error("Failed to insert ratings:", error.message);
             notification.error("Failed to submit ratings");
           }
-
         }
 
-        if (!isEmptyObject(data.suggestionBox) || !isEmptyObject(data.comments)) {
+        if (
+          !isEmptyObject(data.suggestionBox) && isEmptyObject(data?.ratings)
+        ) {
           try {
             sendFeedBack(user?.id, user?.branch_id);
             notification.success("suggestion has been sent");
@@ -181,7 +194,10 @@ function UserDetailsScreen() {
           }
         }
 
-        if (!isEmptyObject(data.otherCriteria) && data.otherCriteria?.otherRating !== 0) {
+        if (
+          !isEmptyObject(data.otherCriteria) &&
+          data.otherCriteria?.otherRating !== 0
+        ) {
           try {
             const otherCriterion = {
               user_id: user?.id,
@@ -195,8 +211,7 @@ function UserDetailsScreen() {
 
             const otherData = await insertOther(otherCriterion);
 
-            otherData && console.log('Other Criterion data:', otherData);
-
+            otherData && console.log("Other Criterion data:", otherData);
           } catch (error) {
             console.error("Failed to insert otherCriterion Data:", error);
             notification.error("Failed to submit other-criterion rating");
@@ -211,7 +226,6 @@ function UserDetailsScreen() {
       } else {
         console.log("User details could not be determined");
       }
-      
     } catch (error) {
       console.error("Error inserting user:", error);
       notification.error("Something went wrong. Please try again.");
