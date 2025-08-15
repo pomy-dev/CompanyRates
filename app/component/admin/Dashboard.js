@@ -30,7 +30,7 @@ import {
 import { Pie, Bar } from "react-chartjs-2";
 import BranchModal from "./BranchModal";
 import LoadingModal from "./loadingModal";
-import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches, getRatingsByCriteriaIds } from "../../../services/companyService";
+import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches, getRatingsByCriteriaIds, getRatings } from "../../../services/companyService";
 
 ChartJS.register(
   ArcElement,
@@ -68,6 +68,8 @@ function Dashboard() {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLogout, setIsLogout] = useState(false);
+  const [filterCriteria, setFilterCriteria] = useState("all");
+  const [filterServicePoint, setFilterServicePoint] = useState("all");
 
   useEffect(() => {
     if (!user) return;
@@ -144,69 +146,73 @@ function Dashboard() {
     async function fetchRatings() {
       const branch_id = localStorage.getItem('branch_id') || "";
 
-      const { data, error } = await supabase
-        .from("ratings")
-        .select("*")
-        .eq("company_id", user?.id)
-        .eq('branch_id', branch_id);
+      const ratingData = await getRatings(user?.id, branch_id);
 
-      if (error) {
-        setError(error?.message);
+      if (!ratingData) {
+        setError('Failed to fetch ratings');
         return;
       }
 
-      if (!data) return;
-      console.log('Ratings Data:', data);
-      setRatings(data);
+      console.log('Ratings Data:', ratingData);
+
+      setRatings(ratingData);
 
       const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
       let totalSum = 0;
       let totalCount = 0;
 
-      data?.forEach((r) => {
-        if (!r?.score) return;
+      ratingData.forEach((r) => {
 
-        let score;
+        if (!r?.criteria || !Array.isArray(r.criteria) || r.criteria.length === 0) return;
 
-        try {
-          score = typeof r.score === "string" ? Int.parse(r.score) : r.score;
-        } catch (error) {
-          console.warn("Invalid rating score interger:", r.score);
-          return;
-        }
+        r.criteria.forEach((c) => {
+          if (!c?.score) return;
 
-        if (!score || typeof score !== "number") return;
+          let score;
 
-        const rounded = Math.round(score);
-        if (distribution[rounded] !== undefined) distribution[rounded]++;
-        totalSum += score;
-        totalCount++;
+          try {
+            score = typeof c.score === "string" ? Int.parse(c.score) : c.score;
+          } catch (error) {
+            console.warn("Invalid rating score interger:", c.score);
+            return;
+          }
 
-      });
+          if (!score || typeof score !== "number") return;
+
+          const rounded = Math.round(score);
+          if (distribution[rounded] !== undefined) distribution[rounded]++;
+          totalSum += score;
+          totalCount++;
+        })
+
+      })
 
       const avg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : 0;
 
       setDistribution(distribution);
-      setTotalRatings(data?.length);
+      setTotalRatings(ratingData?.length);
       setAverageRating(avg);
     }
 
     // Fetch comments from the Feedback table
     async function fetchComments() {
-      const { data: ratingsData, error: ratingsError } = await supabase
-        .from("ratings")
-        .select("id, user_id")
-        .eq("company_id", user?.id)
-        .eq("branch_id", branchId);
-
-      if (ratingsError) {
-        setError(ratingsError.message);
-        return;
-      }
 
       const { data, error } = await supabase
         .from("feedback")
-        .select("*")
+        .select(`
+          id, 
+          created_at, 
+          rating_id, 
+          comments, 
+          suggestions, 
+          user:user_id(
+            id, 
+            name, 
+            phone
+          ), 
+          company_id, 
+          branch_id
+        `)
         .eq("company_id", user?.id)
         .eq("branch_id", branchId);
 
@@ -214,14 +220,6 @@ function Dashboard() {
         setError(error.message);
         return;
       }
-
-      const ratingIdToUsername = {};
-      (ratingsData || []).forEach((r) => {
-        ratingIdToUsername[r.id] = {
-          username: r.username,
-          phone_number: r.phone_number,
-        };
-      });
 
       const groupedComments = data
         .filter((item) => item.comments)
@@ -234,11 +232,10 @@ function Dashboard() {
           return {
             id: item.id,
             date: new Date(item.created_at),
-            suggestion: item.suggestion || "",
+            suggestion: item.suggestions || "",
             rating_id: item.rating_id,
-            username: ratingIdToUsername[item.rating_id]?.username || "Unknown",
-            phone_number:
-              ratingIdToUsername[item.rating_id]?.phone_number || "",
+            username: item.user?.name || "Unknown",
+            phone_number: item.user?.phone || "",
             categories: Object.entries(commentObj || {}).map(
               ([category, content]) => ({
                 category,
@@ -252,15 +249,14 @@ function Dashboard() {
       const groupedSuggestions = data
         .filter(
           (item) =>
-            item.suggestions && item.suggestions.trim() !== "" && item.rating_id
-        )
-        .map((item) => ({
+            item.suggestions && item.suggestions.trim() !== ""
+        ).map((item) => ({
           id: item.id,
           date: new Date(item.created_at),
           suggestion: item.suggestions || "",
           rating_id: item.rating_id,
-          username: ratingIdToUsername[item.rating_id]?.username || "Unknown",
-          phone_number: ratingIdToUsername[item.rating_id]?.phone_number || "",
+          username: item.user?.name || "Unknown",
+          phone_number: item.user?.phone || "",
         }))
         .sort((a, b) => b.date - a.date);
 
@@ -364,14 +360,20 @@ function Dashboard() {
     ).length
     : 0;
 
-  const getFilteredRatings = (data, category, search) => {
+  const getFilteredRatings = (data, criteria, servicePoint, search) => {
     let filtered = data || [];
 
-    if (category !== "all") {
+    if (criteria !== "all") {
+      filtered = filtered.filter((item) =>
+        item.criteria?.some(
+          (c) => c.title?.toLowerCase() === criteria.toLowerCase()
+        )
+      );
+    }
+
+    if (servicePoint !== "all") {
       filtered = filtered.filter(
-        (item) =>
-          item.department?.toLowerCase() === category.toLowerCase() ||
-          item.service_point === category
+        (item) => item.service_point?.toLowerCase() === servicePoint.toLowerCase()
       );
     }
 
@@ -420,16 +422,17 @@ function Dashboard() {
   };
 
   const renderStars = (rating) => {
+    const safeRating = typeof rating === "number" || !isNaN(rating) || typeof rating === 'string' ? Number(rating) : 0;
     return (
       <div className="flex items-center">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-4 w-4 ${star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"
+            className={`h-4 w-4 ${star <= safeRating ? "text-yellow-400 fill-current" : "text-gray-300"
               }`}
           />
         ))}
-        <span className="ml-2 text-sm text-gray-600">{rating.toFixed(1)}</span>
+        <span className="ml-2 text-sm text-gray-600">{safeRating?.toFixed(1)}</span>
       </div>
     );
   };
@@ -985,67 +988,82 @@ function Dashboard() {
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
+
+                  {/* criteria filter */}
                   <select
-                    value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
+                    value={filterCriteria}
+                    onChange={(e) => setFilterCriteria(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Criteria</option>
+                    {companyData?.CompanyServicePoints?.flatMap(sp =>
+                      sp.ServicePointRatingCriteria?.map(c =>
+                        c.RatingCriteria?.title
+                      )
+                    )
+                      .filter((v, i, a) => v && a.indexOf(v) === i)
+                      .map((title, idx) => (
+                        <option key={idx} value={title}>{title}</option>
+                      ))}
+                  </select>
+
+                  {/* service point filter */}
+                  <select
+                    value={filterServicePoint}
+                    onChange={(e) => setFilterServicePoint(e.target.value)}
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="all">All Service Points</option>
-                    {companyData?.servicePoints?.map((sp) => (
-                      <option key={sp.id} value={sp.name}>
-                        {sp.name}
+                    {companyData?.CompanyServicePoints?.map((sp) => (
+                      <option key={sp?.id} value={sp?.servicepoint}>
+                        {sp?.servicepoint}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-4">
-                  {getFilteredRatings(ratings, filterCategory, searchTerm).map(
-                    (rating) => {
-                      const ratingObj =
-                        typeof rating.rating === "string"
-                          ? JSON.parse(rating.rating)
-                          : rating.rating;
-                      const avgScore =
-                        Object.values(ratingObj)
-                          .filter((val) => typeof val === "number")
-                          .reduce((a, b) => a + b, 0) /
-                        Object.keys(ratingObj).length || 0;
+                  {getFilteredRatings(ratings, filterCriteria, filterServicePoint, searchTerm).map(
+                    (rating, index) => {
                       return (
                         <div
-                          key={rating.id}
+                          key={index}
                           className="border border-gray-200 rounded-lg p-6"
                         >
+
+                          {/* display of user, service point and average rating */}
                           <div className="flex justify-between items-start mb-4">
                             <div>
                               <p className="font-semibold text-gray-900">
-                                {rating.username}
+                                {rating?.user?.full_name}
                               </p>
                               <p className="text-sm text-gray-600">
                                 {rating.service_point}
                               </p>
                             </div>
                             <div className="text-right">
-                              {renderStars(avgScore)}
+                              {renderStars(rating?.averageScore)}
                               <p className="text-xs text-gray-500 mt-1">
-                                {new Date(
-                                  rating.created_at
-                                ).toLocaleDateString()}
+                                {new Date(rating?.created_at).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
+
+                          {/* display of each criteria and rating */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 text-gray-700 text-sm space-y-1">
-                            {Object.entries(ratingObj).map(([key, value]) => (
+                            {rating?.criteria?.map((criterion, index) => (
                               <div
-                                key={key}
+                                key={index}
                                 className="flex items-center justify-evenly bg-gray-50 p-2 rounded-full m-1"
                               >
-                                <span>Criterion: {key}</span>
+                                <span className="flex items-center">rated:
+                                  <p className="text-blue-400 font-semibold"> {criterion?.name}</p>
+                                </span>
                                 <div className="flex items-center">
                                   {[1, 2, 3, 4, 5].map((star) => (
                                     <Star
                                       key={star}
-                                      className={`h-4 w-4 ${star <= value
+                                      className={`h-4 w-4 ${star <= criterion?.score
                                         ? "text-yellow-400 fill-current"
                                         : "text-gray-300"
                                         }`}
@@ -1083,9 +1101,9 @@ function Dashboard() {
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="all">All Service Points</option>
-                    {companyData?.servicePoints?.map((sp) => (
-                      <option key={sp.id} value={sp.name}>
-                        {sp.name}
+                    {companyData?.CompanyServicePoints?.map((sp) => (
+                      <option key={sp?.id} value={sp?.servicepoint}>
+                        {sp?.servicepoint}
                       </option>
                     ))}
                   </select>
@@ -1132,8 +1150,8 @@ function Dashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {comment.categories.map((cat, i) => (
-                            <tr key={cat.id} className="border-b">
+                          {comment.categories.map((cat, index) => (
+                            <tr key={index} className="border-b">
                               <td className="px-4 py-2 font-semibold text-xs">{cat.category}</td>
                               <td className="px-4 py-2">
                                 <div className="px-2 py-1 rounded-lg text-xs bg-green-100 text-green-800">

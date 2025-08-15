@@ -145,14 +145,6 @@ function UserDetailsScreen() {
         setShowDialog(true);
 
         if (!isEmptyObject(data?.ratings)) {
-          // const ratings_data = {
-          //   p_company_id: company_id,
-          //   p_branch_id: branch_id,
-          //   p_ratings: data?.formartedRatings,
-          //   p_service_point: data?.servicePoint?.name,
-          //   p_sms: false,
-          //   p_user_id: user?.id,
-          // }
 
           const ratings_data = {
             p_company_id: company_id,
@@ -164,8 +156,6 @@ function UserDetailsScreen() {
             p_comments: data?.comments || {},
             p_suggestions: data?.suggestionBox || null,
           };
-
-     
 
           try {
             let { error } = await supabase.rpc(

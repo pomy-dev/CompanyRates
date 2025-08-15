@@ -1,3 +1,4 @@
+import id from 'zod/v4/locales/id.cjs';
 import { supabase } from './supabaseService';
 
 export const insertServicePoint = async (companyId, servicePoint) => {
@@ -195,4 +196,79 @@ export const getRatingsByCriteriaIds = async (criteriaIds, branchId) => {
   }
 
   return data;
+}
+
+export const getRatings = async (companyId, branchId) => {
+  if (!branchId) return [];
+
+  const { data, error } = await supabase
+    .from("ratings")
+    .select(`
+      id,
+      service_point,
+      score,
+      created_at,
+      criteria:rating_criteria_id (
+        id,
+        title
+      ),
+      user:user_id (
+        id,
+        name,
+        phone
+      )
+    `)
+    .eq("company_id", companyId)
+    .eq("branch_id", branchId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching ratings:", error.message);
+    return [];
+  }
+
+  // Group by service_point + user.id + created_at (rating episode)
+  const ratingEpisodes = data.reduce((acc, curr) => {
+    const key = `${curr.service_point}-${curr.user?.id}-${curr.created_at.split("T")[0]}-${curr.created_at}`;
+    if (!acc[key]) {
+      acc[key] = {
+        id: curr.id,
+        created_at: curr.created_at,
+        service_point: curr.service_point,
+        user: {
+          id: curr.user?.id,
+          full_name: curr.user?.name,
+          phone_number: curr.user?.phone
+        },
+        criteria: [],
+        totalScore: 0,
+        count: 0
+      };
+    }
+
+    acc[key].criteria.push({
+      id: curr?.criteria?.id,
+      name: curr?.criteria?.title,
+      score: curr.score
+    });
+
+    if (curr.score !== null) {
+      acc[key].totalScore += curr.score;
+      acc[key].count += 1;
+    }
+
+    return acc;
+  }, {});
+
+  // Convert to array and calculate average
+  const result = Object.values(ratingEpisodes).map(ep => ({
+    id: ep.id,
+    service_point: ep.service_point,
+    user: ep.user,
+    criteria: ep.criteria,
+    averageScore: ep.count ? (ep.totalScore / ep.count)?.toFixed(2) : 0,
+    created_at: ep.created_at
+  }));
+
+  return result || [];
 }
