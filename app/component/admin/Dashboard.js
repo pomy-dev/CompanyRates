@@ -67,7 +67,7 @@ function Dashboard() {
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLogout, setIsLogout] = useState(false);
+  const [action, setAction] = useState("");
   const [filterCriteria, setFilterCriteria] = useState("all");
   const [filterServicePoint, setFilterServicePoint] = useState("all");
 
@@ -76,130 +76,137 @@ function Dashboard() {
     const branchId = localStorage.getItem("branch_id") || "";
     setSelectedBranchId(branchId);
 
-    // Fetch company service points with respective criteria
-    async function fetchServicePoints() {
-      try {
-        const companyId = user?.id;
+    try {
+      authLoading && setIsLoading(true);
+      setAction("Loading dashboard data...");
 
-        // Fetch company data
-        const retrievedCompanyData = await getCompanyServicePointCriteria(
-          companyId
-        );
+      // Fetch company service points with respective criteria
+      async function fetchServicePoints() {
+        try {
+          const companyId = user?.id;
 
-        if (!retrievedCompanyData) return;
+          // Fetch company data
+          const retrievedCompanyData = await getCompanyServicePointCriteria(
+            companyId
+          );
 
-        const allCriteriaIds = retrievedCompanyData.CompanyServicePoints.flatMap(
-          (sp) => sp.ServicePointRatingCriteria.map(
-            (c) => c.RatingCriteria.id
-          )
-        );
+          if (!retrievedCompanyData) return;
 
-        // Get ratings for all criteria IDs of this service point
-        const ratings = await getRatingsByCriteriaIds(allCriteriaIds, branchId);
-
-        const updatedServicePoints = await Promise.all(
-          retrievedCompanyData.CompanyServicePoints.map(async (sp) => {
-            const criteriaIds = sp.ServicePointRatingCriteria.map(
+          const allCriteriaIds = retrievedCompanyData.CompanyServicePoints.flatMap(
+            (sp) => sp.ServicePointRatingCriteria.map(
               (c) => c.RatingCriteria.id
-            );
+            )
+          );
 
-            const servicePointRatings = ratings.filter((r) =>
-              criteriaIds.includes(r.rating_criteria_id)
-            );
+          // Get ratings for all criteria IDs of this service point
+          const ratings = await getRatingsByCriteriaIds(allCriteriaIds, branchId);
 
-            let average = null;
-            if (servicePointRatings.length > 0) {
-              const total = servicePointRatings.reduce((sum, r) => sum + r.score, 0);
-              average = total / servicePointRatings.length;
+          const updatedServicePoints = await Promise.all(
+            retrievedCompanyData.CompanyServicePoints.map(async (sp) => {
+              const criteriaIds = sp.ServicePointRatingCriteria.map(
+                (c) => c.RatingCriteria.id
+              );
+
+              const servicePointRatings = ratings.filter((r) =>
+                // check if rating criteria id is in the criteriaIds
+                r.rating_criteria_id &&
+                r.rating_criteria_id !== null &&
+                r.rating_criteria_id !== undefined &&
+                criteriaIds.includes(r.rating_criteria_id)
+              );
+
+              let average = null;
+              if (servicePointRatings.length > 0) {
+                const total = servicePointRatings.reduce((sum, r) => sum + r.score, 0);
+                average = total / servicePointRatings.length;
+              }
+
+              return {
+                ...sp,
+                averageRating: average, // merged value
+              };
+            }));
+
+          const companyWithRatings = {
+            ...retrievedCompanyData,
+            CompanyServicePoints: updatedServicePoints,
+          };
+
+          setCompanyData(companyWithRatings);
+          console.log("Service Points:", companyWithRatings);
+
+        } catch (err) {
+          setError(err.message);
+        }
+      }
+
+      // Fetch comppany branches
+      async function fetchCompanyBranches() {
+        try {
+          const branchesData = await fetchBranches(user?.id);
+          if (!branchesData) return;
+          setBranches(branchesData);
+        } catch (error) {
+          console.error('Error in fetchCompanyBranches:', error.message);
+        }
+      }
+
+      // Fetch ratings from the ratings table
+      async function fetchRatings() {
+        const ratingData = await getRatings(user?.id, branchId);
+
+        if (!ratingData) {
+          setError('Failed to fetch ratings');
+          return;
+        }
+
+        // console.log('Ratings Data:', ratingData);
+
+        setRatings(ratingData);
+
+        const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        let totalSum = 0;
+        let totalCount = 0;
+
+        ratingData.forEach((r) => {
+
+          if (!r?.criteria || !Array.isArray(r.criteria) || r.criteria.length === 0) return;
+
+          r.criteria.forEach((c) => {
+            if (!c?.score) return;
+
+            let score;
+
+            try {
+              score = typeof c.score === "string" ? Int.parse(c.score) : c.score;
+            } catch (error) {
+              console.warn("Invalid rating score interger:", c.score);
+              return;
             }
 
-            return {
-              ...sp,
-              averageRating: average, // merged value
-            };
-          }));
+            if (!score || typeof score !== "number") return;
 
-        const companyWithRatings = {
-          ...retrievedCompanyData,
-          CompanyServicePoints: updatedServicePoints,
-        };
+            const rounded = Math.round(score);
+            if (distribution[rounded] !== undefined) distribution[rounded]++;
+            totalSum += score;
+            totalCount++;
+          })
 
-        setCompanyData(companyWithRatings);
-        // console.log("Service Points + Average Ratings:", companyWithRatings);
-      } catch (err) {
-        setError(err.message);
-      }
-    }
-
-    // Fetch comppany branches
-    async function fetchCompanyBranches() {
-      try {
-        const branchesData = await fetchBranches(user?.id);
-        if (!branchesData) return;
-        setBranches(branchesData);
-      } catch (error) {
-        console.error('Error in fetchCompanyBranches:', error.message);
-      }
-    }
-
-    // Fetch ratings from the ratings table
-    async function fetchRatings() {
-      const branch_id = localStorage.getItem('branch_id') || "";
-
-      const ratingData = await getRatings(user?.id, branch_id);
-
-      if (!ratingData) {
-        setError('Failed to fetch ratings');
-        return;
-      }
-
-      console.log('Ratings Data:', ratingData);
-
-      setRatings(ratingData);
-
-      const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      let totalSum = 0;
-      let totalCount = 0;
-
-      ratingData.forEach((r) => {
-
-        if (!r?.criteria || !Array.isArray(r.criteria) || r.criteria.length === 0) return;
-
-        r.criteria.forEach((c) => {
-          if (!c?.score) return;
-
-          let score;
-
-          try {
-            score = typeof c.score === "string" ? Int.parse(c.score) : c.score;
-          } catch (error) {
-            console.warn("Invalid rating score interger:", c.score);
-            return;
-          }
-
-          if (!score || typeof score !== "number") return;
-
-          const rounded = Math.round(score);
-          if (distribution[rounded] !== undefined) distribution[rounded]++;
-          totalSum += score;
-          totalCount++;
         })
 
-      })
+        const avg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : 0;
 
-      const avg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : 0;
+        setDistribution(distribution);
+        setTotalRatings(ratingData?.length);
+        setAverageRating(avg);
+      }
 
-      setDistribution(distribution);
-      setTotalRatings(ratingData?.length);
-      setAverageRating(avg);
-    }
+      // Fetch comments from the Feedback table
+      async function fetchComments() {
 
-    // Fetch comments from the Feedback table
-    async function fetchComments() {
-
-      const { data, error } = await supabase
-        .from("feedback")
-        .select(`
+        const { data, error } = await supabase
+          .from("feedback")
+          .select(`
           id, 
           created_at, 
           rating_id, 
@@ -213,142 +220,104 @@ function Dashboard() {
           company_id, 
           branch_id
         `)
-        .eq("company_id", user?.id)
-        .eq("branch_id", branchId);
+          .eq("company_id", user?.id)
+          .eq("branch_id", branchId);
 
-      if (error) {
-        setError(error.message);
-        return;
-      }
+        if (error) {
+          setError(error.message);
+          return;
+        }
 
-      const groupedComments = data
-        .filter((item) => item.comments)
-        .map((item) => {
-          const commentObj =
-            typeof item.comments === "string"
+        const groupedComments = data
+          .filter((item) => item.comments)
+          .map((item) => {
+            const commentObj = typeof item.comments === "string" && item.comments !== null
               ? JSON.parse(item.comments)
               : item.comments;
 
-          return {
+            return {
+              id: item.id,
+              date: new Date(item.created_at),
+              suggestion: item.suggestions || "",
+              rating_id: item.rating_id,
+              username: item.user?.name || "Unknown",
+              phone_number: item.user?.phone || "",
+              categories: Object.entries(commentObj || {}).map(
+                ([category, content]) => ({
+                  category,
+                  content,
+                })
+              ),
+            };
+          })
+          .sort((a, b) => b.date - a.date)
+
+        const groupedSuggestions = data
+          .filter(
+            (item) =>
+              item.suggestions && item.suggestions.trim() !== ""
+          ).map((item) => ({
             id: item.id,
             date: new Date(item.created_at),
             suggestion: item.suggestions || "",
             rating_id: item.rating_id,
             username: item.user?.name || "Unknown",
             phone_number: item.user?.phone || "",
-            categories: Object.entries(commentObj || {}).map(
-              ([category, content]) => ({
-                category,
-                content,
-              })
-            ),
-          };
-        })
-        .sort((a, b) => b.date - a.date)
+          }))
+          .sort((a, b) => b.date - a.date);
 
-      const groupedSuggestions = data
-        .filter(
-          (item) =>
-            item.suggestions && item.suggestions.trim() !== ""
-        ).map((item) => ({
-          id: item.id,
-          date: new Date(item.created_at),
-          suggestion: item.suggestions || "",
-          rating_id: item.rating_id,
-          username: item.user?.name || "Unknown",
-          phone_number: item.user?.phone || "",
-        }))
-        .sort((a, b) => b.date - a.date);
-
-      setComments(data);
-      setRecentComments(groupedComments);
-      setSuggestions(groupedSuggestions);
-    }
-
-    // Fetch all Other data
-    async function fetchOtherData() {
-      const { data: otherData, error: otherError } = await supabase
-        .from("other")
-        .select("*")
-        .eq("company_id", user.id);
-      if (otherError) {
-        setError(otherError.message);
-        return;
+        setComments(data);
+        setRecentComments(groupedComments);
+        setSuggestions(groupedSuggestions);
       }
-      // Filter out records where both criteria and comments are empty/null/undefined
-      const filteredData = (otherData || []).filter(
-        (item) =>
-          (item.criteria && item.criteria.toString().trim() !== "") ||
-          (item.comments && item.comments.toString().trim() !== "")
-      );
 
-      setOtherData(filteredData);
-    }
+      // Fetch all Other data
+      async function fetchOtherData() {
+        const { data: otherData, error: otherError } = await supabase
+          .from("other")
+          .select("*")
+          .eq("company_id", user.id)
+          .eq("branch_id", branchId);
 
-    // Fetch all users/raters
-    async function fetchUsers() {
-      const companyId = user?.id;
-      const raters = await getAllUsersByCompanyBranchId(companyId, null);
-      if (!raters) return;
+        if (otherError) {
+          setError(otherError.message);
+          return;
+        }
+        // Filter out records where both criteria and comments are empty/null/undefined
+        const filteredData = (otherData || []).filter(
+          (item) =>
+            (item.criteria && item.criteria.toString().trim() !== "") ||
+            (item.comments && item.comments.toString().trim() !== "")
+        );
 
-      setUsers(raters);
-    }
+        setOtherData(filteredData);
+      }
 
-    fetchUsers();
-    fetchOtherData();
-    fetchComments();
-    fetchRatings();
-    fetchServicePoints();
-    fetchCompanyBranches();
-  }, [user]);
+      // Fetch all users/raters
+      async function fetchUsers() {
+        const raters = await getAllUsersByCompanyBranchId(user?.id, branchId);
+        if (!raters) return;
 
-  const handleLogout = async () => {
-    setIsLogout(true);
-    try {
-      await logout();
-      setCompanyData(null);
-      setRatings([]);
-      setComments([]);
-      setOtherData([]);
-      setTotalRatings(0);
-      setAverageRating(0);
-      setUsers([]);
-      setBranches([]);
-      setSelectedBranchId("");
-      setDistribution({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
-      setError(null);
-      setRecentComments([]);
-      setSuggestions([]);
-      setActiveTab("overview");
-    }
-    catch (error) {
-      console.error("Logout Error:", error);
-      setError("Failed to logout. Please try again.");
-      setIsLogout(false);
+        setUsers(raters);
+      }
+
+      fetchUsers();
+      fetchOtherData();
+      fetchComments();
+      fetchRatings();
+      fetchServicePoints();
+      fetchCompanyBranches();
+    } catch (error) {
+      console.error("Error in Dashboard useEffect:", error.message);
     } finally {
-      // clear localStorage
-      localStorage.removeItem("company_id");
-      localStorage.removeItem("branch_id");
-      localStorage.removeItem("company_logo_base64");
-      localStorage.removeItem("cachedDepartments");
-      localStorage.removeItem("cachedBranches");
-      // go to login page
-      setTimeout(() => {
-        setIsLogout(false);
-        window.location.href = "/login";
-      }, 3000);
+      setIsLoading(false);
     }
-  };
+  }, [user]);
 
   const activeServicePoints = companyData?.CompanyServicePoints?.filter((sp) => sp.isActive).length || 0;
 
   const totalComments = Array.isArray(comments)
-    ? comments.filter(
-      (c) =>
-        c.comments &&
-        typeof c.comments === "object" &&
-        Object.keys(c.comments).length > 0
-    ).length
+    ? comments.filter((c) => c.comments).length
     : 0;
 
   const totalSuggestions = Array.isArray(comments)
@@ -446,13 +415,13 @@ function Dashboard() {
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
   ];
 
-  if (authLoading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    );
-  }
+  // if (authLoading) {
+  //   return (
+  //     <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+  //       <div className="text-gray-600">Loading...</div>
+  //     </div>
+  //   );
+  // }
 
   const totalUsers = users?.length || 0;
 
@@ -520,7 +489,7 @@ function Dashboard() {
         data: retrievedServicePoints.map(
           (servicePoint) =>
             comments.filter((comment) => {
-              const rating = ratings.find((r) => r.id === comment.rating_id);
+              const rating = ratings.find((r) => r.id === comment.rating_id && comment.comments !== null);
               return rating && rating.service_point === servicePoint;
             }).length
         ),
@@ -532,15 +501,28 @@ function Dashboard() {
   };
 
   const handleSwitchBranch = (branchId) => {
-    setSelectedBranchId(branchId);
-    // Optional: fetch or update something based on selected branch
-    const selectedBranch = branches.find((b) => b.branch_id === branchId);
-    console.log("Selected branch:", selectedBranch);
+    setIsLoading(true);
+    setAction("Switching branch...");
+    try {
+      setSelectedBranchId(branchId);
+      localStorage.setItem("branch_id", branchId);
+      // Clear cached data
+      localStorage.removeItem("cachedRatings");
+      localStorage.removeItem("cachedComments");
+      localStorage.removeItem("cachedOtherData");
+      // Reload the page to apply changes
+      window.location.reload();
+    } catch (error) {
+      console.error("Error switching branch:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSaveBranch = async (formData) => {
     const companyId = localStorage.getItem("company_id");
     setIsLoading(true)
+    setAction("Creating new branch...");
 
     try {
       const insertedBranch = await insertNewBranch(companyId, formData)
@@ -575,12 +557,47 @@ function Dashboard() {
       setBranches([...branches, newBranch]);
 
     } catch (error) {
-      setIsLoading(false)
       console.error('Branch Creation Error:', error);
       setError(error.message);
     } finally {
       setIsLoading(false)
       setShowBranchModal(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsLoading(true);
+    setAction("Logging out...");
+    try {
+      await logout();
+      setCompanyData(null);
+      setRatings([]);
+      setComments([]);
+      setOtherData([]);
+      setTotalRatings(0);
+      setAverageRating(0);
+      setUsers([]);
+      setBranches([]);
+      setSelectedBranchId("");
+      setDistribution({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+      setError(null);
+      setRecentComments([]);
+      setSuggestions([]);
+      setActiveTab("overview");
+    }
+    catch (error) {
+      console.error("Logout Error:", error);
+      setError("Failed to logout. Please try again.");
+    } finally {
+      // clear localStorage
+      localStorage.removeItem("company_id");
+      localStorage.removeItem("branch_id");
+      localStorage.removeItem("company_logo_base64");
+      localStorage.removeItem("cachedDepartments");
+      localStorage.removeItem("cachedBranches");
+      // go to login page
+      window.location.href = "/login";
+      setIsLoading(false);
     }
   };
 
@@ -593,13 +610,17 @@ function Dashboard() {
             <div className="flex items-center">
               <div className="bg-blue-100 p-2 rounded-lg mr-4">
                 {companyData?.logoUrl ? (
-                  <img
-                    src={companyData?.logoUrl}
-                    alt="logo"
-                    className="h-8 w-8 object-cover rounded"
-                  />
+                  <button type="button" onClick={() => window.location.href = "/"}>
+                    <img
+                      src={companyData?.logoUrl}
+                      alt="logo"
+                      className="h-8 w-8 object-cover rounded"
+                    />
+                  </button>
                 ) : (
-                  <Building2 className="h-8 w-8 text-blue-600" />
+                  <button type="button" onClick={() => window.location.href = "/"}>
+                    <Building2 className="h-8 w-8 text-blue-600" />
+                  </button>
                 )}
               </div>
               <div>
@@ -923,6 +944,7 @@ function Dashboard() {
                         key={servicePoint.id}
                         className="border border-gray-200 rounded-lg p-6"
                       >
+
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <h4 className="font-semibold text-gray-900">
@@ -941,6 +963,7 @@ function Dashboard() {
                             {servicePoint.isActive ? "Active" : "Inactive"}
                           </span>
                         </div>
+
                         <div className="mb-4">
                           <p className="text-sm font-medium text-gray-900">
                             Rating Criteria:
@@ -960,6 +983,7 @@ function Dashboard() {
                             )}
                           </ul>
                         </div>
+
                         <div className="flex justify-between items-center">
                           {renderStars(servicePoint?.averageRating || 0)}
                           <span className="text-xs text-gray-500">
@@ -1319,10 +1343,10 @@ function Dashboard() {
       />
 
       <LoadingModal
-        isOpen={isLogout}
-        onClose={() => setIsLogout(false)}
-        action={"Logging out"}
-        isLoading={isLogout}
+        isOpen={isLoading}
+        onClose={() => setIsLoading(false)}
+        action={action}
+        isLoading={isLoading}
       />
     </div>
   );

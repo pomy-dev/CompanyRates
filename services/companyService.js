@@ -1,4 +1,3 @@
-import id from 'zod/v4/locales/id.cjs';
 import { supabase } from './supabaseService';
 
 export const insertServicePoint = async (companyId, servicePoint) => {

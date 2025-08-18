@@ -20,7 +20,7 @@ export const getAllUsersByCompanyBranchId = async (companyId, branchId) => {
     .from('users')
     .select('*')
     .eq('company_id', companyId)
-  // .eq('branch_id', branchId)
+    .eq('branch_id', branchId)
 
   if (error) throw error.message;
 

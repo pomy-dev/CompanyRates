@@ -254,7 +254,7 @@ function SelectRatings() {
   return (
     <div className="h-screen w-full bg-gradient-to-br from-blue-100 via-white to-purple-100 flex items-center justify-center p-3 overflow-hidden">
       <Card className="backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl max-w-3xl w-full animate-fade-in-up">
-        <CardContent className="p-8 text-center">
+        <CardContent className="p-8 text-center overflow-y-auto max-h-[90vh]">
           {/* Header Section */}
           <div className="text-center mb-12">
             <div className="flex justify-center mb-6">
