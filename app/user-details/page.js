@@ -1,5 +1,6 @@
-import UserDetails from "../component/UserDetails";
+"use client";
 
+import UserDetails from "../component/UserDetails";
 
 export default function UserDetailsPage() {
   return (
