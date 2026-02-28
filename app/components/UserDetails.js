@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { User, ArrowRight, Phone, Mail } from "lucide-react";
 import { useDataContext } from "../data-context";
@@ -18,7 +18,7 @@ import { Label } from "../components/ui/label";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { useNotification } from "./ui/notification";
 import { FiCheck } from "react-icons/fi";
-//local moduules
+// local modules
 import {
   insertUser,
   insertFeedback,
@@ -31,12 +31,27 @@ function UserDetailsScreen() {
   const router = useRouter();
   const [showDialog, setShowDialog] = useState(false);
 
-  //global  data context :
+  // global data context
   const { data, setData } = useDataContext();
   const { phoneNumber, username, email } = data;
   const { notification } = useNotification();
-  const company_id = localStorage.getItem("company_id");
-  const branch_id = localStorage.getItem("branch_id");
+
+  // New state for values that come from localStorage
+  const [companyId, setCompanyId] = useState(null);
+  const [branchId, setBranchId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true); // Optional: show loading until we read storage
+
+  // Load company_id and branch_id from localStorage **only in the browser**
+  useEffect(() => {
+    if (typeof window === "undefined") return; // extra safety (though useEffect already skips SSR)
+
+    const storedCompany = localStorage.getItem("company_id");
+    const storedBranch = localStorage.getItem("branch_id");
+
+    setCompanyId(storedCompany);
+    setBranchId(storedBranch);
+    setIsLoading(false);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,7 +76,7 @@ function UserDetailsScreen() {
     }, 5000);
   };
 
-  //check object if emty :
+  // check object if empty
   const isEmptyObject = (obj) => {
     for (let key in obj) {
       if (obj.hasOwnProperty(key)) {
@@ -72,13 +87,18 @@ function UserDetailsScreen() {
   };
 
   const sendUser = async (user_path) => {
+    if (isLoading || !companyId) {
+      notification.error("Company information not loaded yet. Please wait.");
+      return false;
+    }
+
     const userInfo = {
       name: data?.username,
       phone: data?.phoneNumber,
       email: data?.email,
       user_path: user_path || "rating_only",
-      company_id: company_id,
-      branch_id: branch_id || null,
+      company_id: companyId,
+      branch_id: branchId || null,
     };
 
     if (data?.username || data?.phoneNumber) {
@@ -87,40 +107,41 @@ function UserDetailsScreen() {
           name: data?.username,
           phone: data?.phoneNumber,
           email: data?.email,
-          company_id: company_id,
-          branch_id: branch_id || null,
+          company_id: companyId,
+          branch_id: branchId || null,
           user_path: user_path,
           sms: "waiting",
         });
 
-        if (!data1) return;
-
+        if (!data1) return false;
         return "sms";
       }
 
       try {
-        const data = await insertUser(userInfo);
-        if (!data) return;
-        return data;
+        const result = await insertUser(userInfo);
+        if (!result) return false;
+        return result;
       } catch (error) {
         console.error("Failed to insert user:", error);
         notification.error("Error inserting user details");
-        return error;
+        return false;
       }
     } else {
-      notification.error("Make sure you have enter your details");
+      notification.error("Make sure you have entered your details");
       return false;
     }
   };
 
-  const sendFeedBack = async (userId, branchId) => {
+  const sendFeedBack = async (userId, branchIdFromUser) => {
+    if (!companyId) return;
+
     const newFeedback = {
       user_id: userId,
       comments: !isEmptyObject(data.comments) ? data.comments : null,
       suggestions: data.suggestionBox ? data.suggestionBox : null,
       ratingId: null,
-      company_id: company_id,
-      branch_id: branchId,
+      company_id: companyId,
+      branch_id: branchIdFromUser || branchId,
     };
 
     try {
@@ -132,6 +153,11 @@ function UserDetailsScreen() {
   };
 
   const submitData = async () => {
+    if (isLoading || !companyId) {
+      notification.error("Please wait while company information loads...");
+      return;
+    }
+
     try {
       const user =
         !isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)
@@ -139,16 +165,15 @@ function UserDetailsScreen() {
           : !isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)
             ? await sendUser("suggestion_only")
             : await sendUser("rating_only");
-      user && console.log("User from DB:", user);
 
       if (user) {
+        console.log("User from DB:", user);
         setShowDialog(true);
 
         if (!isEmptyObject(data?.ratings)) {
-
           const ratings_data = {
-            p_company_id: company_id,
-            p_branch_id: branch_id,
+            p_company_id: companyId,
+            p_branch_id: branchId,
             p_ratings: data?.formartedRatings,
             p_service_point: data?.servicePoint?.name,
             p_sms: false,
@@ -167,7 +192,7 @@ function UserDetailsScreen() {
 
             notification.ratingSubmitted();
           } catch (error) {
-            console.error("Failed to insert ratings:", error.message);
+            console.error("Failed to insert ratings:", error);
             notification.error("Failed to submit ratings");
           }
         }
@@ -176,11 +201,11 @@ function UserDetailsScreen() {
           !isEmptyObject(data.suggestionBox) && isEmptyObject(data?.ratings)
         ) {
           try {
-            sendFeedBack(user?.id, user?.branch_id);
+            await sendFeedBack(user?.id, user?.branch_id);
             notification.success("suggestion has been sent");
           } catch (error) {
-            console.error("Failed to insert otherCriterion Data:", error);
-            notification.error("Failed to submit other-criterion rating");
+            console.error("Failed to insert feedback:", error);
+            notification.error("Failed to submit suggestion");
           }
         }
 
@@ -194,13 +219,12 @@ function UserDetailsScreen() {
               criteria: data.otherCriteria?.otherValue,
               ratings: data.otherCriteria?.otherRating,
               comments: data.otherCriteria?.otherReason,
-              company_id: company_id,
-              branch_id: user?.branch_id,
+              company_id: companyId,
+              branch_id: user?.branch_id || branchId,
               department: data.otherCriteria?.otherDepartment,
             };
 
             const otherData = await insertOther(otherCriterion);
-
             otherData && console.log("Other Criterion data:", otherData);
           } catch (error) {
             console.error("Failed to insert otherCriterion Data:", error);
@@ -213,19 +237,28 @@ function UserDetailsScreen() {
         }
 
         cleaner();
-      } else {
-        console.log("User details could not be determined");
       }
     } catch (error) {
-      console.error("Error inserting user:", error);
+      console.error("Error in submitData:", error.message);
       notification.error("Something went wrong. Please try again.");
     } finally {
-      cleaner();
       setTimeout(() => {
         setShowDialog(false);
       }, 2000);
     }
   };
+
+  // Show loading state while reading localStorage (prevents submit before values are ready)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading company information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -326,7 +359,6 @@ function UserDetailsScreen() {
       <Dialog open={showDialog}>
         <DialogContent className="max-w-md text-center">
           <div className="p-8">
-            {/* Success Icon */}
             <Avatar className="w-20 h-20 mx-auto mb-6">
               <AvatarFallback className="bg-green-500 text-white">
                 <FiCheck className="w-10 h-10" />
@@ -335,7 +367,6 @@ function UserDetailsScreen() {
             <DialogTitle></DialogTitle>
             <DialogDescription></DialogDescription>
 
-            {/* Success Message */}
             <h3 className="text-3xl font-bold text-slate-800 mb-4">
               Thank You!
             </h3>
@@ -343,7 +374,6 @@ function UserDetailsScreen() {
               Your feedback has been submitted successfully.
             </p>
 
-            {/* Loading indicator */}
             <div className="flex justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700"></div>
             </div>
