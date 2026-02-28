@@ -1,4 +1,4 @@
-import Dashboard from "../component/admin/Dashboard";
+import Dashboard from "../components/admin/Dashboard";
 
 
 export default function LoginPage() {

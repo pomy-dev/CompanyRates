@@ -16,15 +16,15 @@ import {
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { fetchBranchSummary } from "../../services/companyService";
-import { Button } from "../components/ui/button";
+import { Button } from "./ui/button";
 import { getIconForDepartment } from "../../utils/iconSelector";
-import { Card, CardContent, } from "../components/ui/card";
+import { Card, CardContent, } from "./ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
+} from "./ui/dropdown-menu";
 //local modules
 import { useDataContext } from "../data-context";
 import {
@@ -32,8 +32,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "../components/ui/dialog";
-import { useNotification } from "../components/ui/notification";
+} from "./ui/dialog";
+import { useNotification } from "./ui/notification";
 import { DialogDescription } from "@radix-ui/react-dialog";
 
 function WelcomeScreen() {

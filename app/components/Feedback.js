@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { FiArrowLeft } from "react-icons/fi";
 //local modules
 import { useDataContext } from "../data-context";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Textarea } from "../components/ui/textarea";
 import { MessageSquare } from "lucide-react";
 

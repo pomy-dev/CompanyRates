@@ -1,4 +1,4 @@
-import SelectRatings from "../component/SelectRatings";
+import SelectRatings from "../components/SelectRatings";
 
 
 export default function SelecRatingsPage() {

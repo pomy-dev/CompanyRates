@@ -1,5 +1,5 @@
 
-import ServiceScreen from "../component/ServicePoint";
+import ServiceScreen from "../components/ServicePoint";
 
 export default function ServicePointPage() {
   return (

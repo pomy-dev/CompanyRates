@@ -15,8 +15,8 @@ import { FaStar } from "react-icons/fa";
 //local modules
 import { useDataContext } from "../data-context";
 import { iconMap } from "../../utils/iconSelector";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
+import { Button } from "./ui/button";
+import { Card, CardContent } from "./ui/card";
 
 function ServiceScreen() {
   const router = useRouter();

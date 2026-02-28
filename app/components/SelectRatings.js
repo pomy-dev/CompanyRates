@@ -11,15 +11,15 @@ import {
 } from "react-icons/fi";
 import { FcCollaboration, FcEngineering } from "react-icons/fc";
 import { useDataContext } from "../data-context";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
+import { Button } from "./ui/button";
+import { Card, CardContent } from "./ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "../components/ui/dialog";
+} from "./ui/dialog";
 import { Textarea } from "../components/ui/textarea";
 import { Badge } from "../components/ui/badge";
 

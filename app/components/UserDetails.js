@@ -4,19 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { User, ArrowRight, Phone, Mail } from "lucide-react";
 import { useDataContext } from "../data-context";
-import { Button } from "../components/ui/button";
+import { Button } from "./ui/button";
 import { Input } from "../components/ui/input";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "../components/ui/dialog";
+} from "./ui/card";
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Label } from "../components/ui/label";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { useNotification } from "../components/ui/notification";
+import { useNotification } from "./ui/notification";
 import { FiCheck } from "react-icons/fi";
 //local moduules
 import {
@@ -137,8 +137,8 @@ function UserDetailsScreen() {
         !isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)
           ? await sendUser("both")
           : !isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)
-          ? await sendUser("suggestion_only")
-          : await sendUser("rating_only");
+            ? await sendUser("suggestion_only")
+            : await sendUser("rating_only");
       user && console.log("User from DB:", user);
 
       if (user) {
