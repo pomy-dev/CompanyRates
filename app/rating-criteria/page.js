@@ -1,4 +1,4 @@
-import SelectRatingCriteria from "@/component/SelectRatings";
+import SelectRatingCriteria from "../components/SelectRatings";
 
 
 export default function RatingCriteriaPage() {
