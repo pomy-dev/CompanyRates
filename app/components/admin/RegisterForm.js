@@ -496,9 +496,9 @@ function RegistrationForm({ onRegister, onBack }) {
               )}
 
               {currentStep === 2 && (
-                <div className="w-5xl space-y-4">
-                  <div className="flex items-center justify-center mb-4">
-                    <div>
+                <div className="w-full max-w-6xl space-y-4">
+                  <div className="flex items-center justify-center mb-4 px-1 sm:px-0">
+                    <div className="text-center sm:text-left">
                       <h2 className="text-xl font-semibold text-gray-900">Service Points</h2>
                       <p className="text-gray-600 text-sm mt-1">
                         Add service points and their rating criteria, and preview them on the right.
@@ -506,7 +506,7 @@ function RegistrationForm({ onRegister, onBack }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {/* Left Column: Input Form (Modal) */}
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">Add Service Point</h3>
@@ -622,7 +622,7 @@ function RegistrationForm({ onRegister, onBack }) {
                           <button
                             type="button"
                             onClick={saveServicePoint}
-                            className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                            className="w-full sm:w-auto bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
                           >
                             {editingIndex !== null ? 'Update Service Point' : 'Add Service Point'}
                           </button>
@@ -646,9 +646,11 @@ function RegistrationForm({ onRegister, onBack }) {
                               key={index}
                               className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm"
                             >
-                              <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-semibold text-gray-900 text-lg">{sp.name}</h4>
-                                <div className="flex space-x-2">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
+                                <h4 className="font-semibold text-gray-900 text-lg break-words sm:truncate sm:max-w-[18rem] min-w-0">
+                                  {sp.name}
+                                </h4>
+                                <div className="flex flex-wrap gap-2 sm:justify-end">
                                   <button
                                     type="button"
                                     onClick={() => editServicePoint(index)}
@@ -722,11 +724,11 @@ function RegistrationForm({ onRegister, onBack }) {
                     </div>
                   </div>
 
-                  <div className="flex justify-center pt-4">
+                  <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
                     <button
                       type="button"
                       onClick={prevStep}
-                      className="bg-gray-300 text-gray-700 px-8 py-3 ml-2 mr-2 rounded-lg font-medium hover:bg-gray-400 transition-colors shadow-sm"
+                      className="w-full sm:w-auto bg-gray-300 text-gray-700 px-8 py-3 rounded-lg font-medium hover:bg-gray-400 transition-colors shadow-sm"
                     >
                       Previous
                     </button>
@@ -734,7 +736,7 @@ function RegistrationForm({ onRegister, onBack }) {
                     <button
                       type="submit"
                       disabled={servicePoints.length === 0}
-                      className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium shadow-sm transition-colors ${servicePoints.length === 0
+                      className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-lg font-medium shadow-sm transition-colors ${servicePoints.length === 0
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         : 'bg-emerald-600 text-white hover:bg-emerald-700'
                         }`}
@@ -746,7 +748,6 @@ function RegistrationForm({ onRegister, onBack }) {
                 </div>
               )}
             </form>
-
           </div>
         </div>
       </div>

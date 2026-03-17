@@ -16,6 +16,8 @@ import {
   Plus,
   Search,
   ChevronDown,
+  Menu,
+  X,
 } from "lucide-react";
 import { useAuth } from "../../../app-context/auth-context";
 import {
@@ -70,6 +72,8 @@ function Dashboard() {
   const [action, setAction] = useState("");
   const [filterCriteria, setFilterCriteria] = useState("all");
   const [filterServicePoint, setFilterServicePoint] = useState("all");
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
+  const [isTabsMoreOpen, setIsTabsMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -415,6 +419,9 @@ function Dashboard() {
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
   ];
 
+  const primaryTabs = tabs.slice(0, 2);
+  const overflowTabs = tabs.slice(2);
+
   // if (authLoading) {
   //   return (
   //     <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -606,7 +613,7 @@ function Dashboard() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-4 gap-3">
             <div className="flex items-center">
               <div className="bg-blue-100 p-2 rounded-lg mr-4">
                 {companyData?.logoUrl ? (
@@ -624,10 +631,10 @@ function Dashboard() {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 max-w-[14rem] sm:max-w-none truncate">
                   {companyData?.company_name}
                 </h1>
-                <div className="flex items-center text-gray-600 text-sm">
+                <div className="hidden sm:flex items-center text-gray-600 text-sm">
                   <MapPin className="h-4 w-4 mr-1" />
                   <span>{companyData?.location}</span>
                   <span className="mx-2">•</span>
@@ -636,7 +643,8 @@ function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            {/* Desktop header actions */}
+            <div className="hidden lg:flex items-center space-x-4">
               {/* Branch Selector */}
               {branches?.length > 0 && (
                 <div className="relative">
@@ -673,8 +681,89 @@ function Dashboard() {
                 Logout
               </button>
             </div>
+
+            {/* Mobile/tablet header menu button */}
+            <div className="lg:hidden flex items-center">
+              <button
+                type="button"
+                aria-label="Open menu"
+                aria-expanded={isHeaderMenuOpen}
+                onClick={() => setIsHeaderMenuOpen(true)}
+                className="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Mobile/tablet menu drawer */}
+        {isHeaderMenuOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setIsHeaderMenuOpen(false)}
+            />
+            <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-xl border-l border-gray-200 p-4 flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="font-semibold text-gray-900">Menu</div>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  onClick={() => setIsHeaderMenuOpen(false)}
+                  className="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="pt-4 space-y-4">
+                {branches?.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 mb-2">Branch</div>
+                    <div className="relative">
+                      <select
+                        value={selectedBranchId}
+                        onChange={(e) => {
+                          handleSwitchBranch(e.target.value);
+                          setIsHeaderMenuOpen(false);
+                        }}
+                        className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                      >
+                        <option value="">Select Branch</option>
+                        {branches.map((branch, index) => (
+                          <option key={index} value={branch.branch_id}>
+                            {branch.branch_name}-branch
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    setShowBranchModal(true);
+                    setIsHeaderMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Branch
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center px-4 py-2 text-red-700 border border-red-200 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -752,7 +841,8 @@ function Dashboard() {
         {/* Tab Navigation */}
         <div className="bg-white rounded-xl shadow-sm mb-8">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            {/* Desktop tabs */}
+            <nav className="hidden lg:flex space-x-8 px-6" aria-label="Tabs">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -769,6 +859,80 @@ function Dashboard() {
                   </button>
                 );
               })}
+            </nav>
+
+            {/* Mobile/tablet tabs + More dropdown */}
+            <nav className="lg:hidden px-4 sm:px-6" aria-label="Tabs">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 overflow-x-auto py-2">
+                  {primaryTabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setIsTabsMoreOpen(false);
+                        }}
+                        className={`shrink-0 inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-gray-600 hover:bg-gray-50"
+                          }`}
+                      >
+                        <Icon className="h-4 w-4 mr-2" />
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={isTabsMoreOpen}
+                    onClick={() => setIsTabsMoreOpen((v) => !v)}
+                    className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
+                    More
+                    <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${isTabsMoreOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isTabsMoreOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsTabsMoreOpen(false)}
+                      />
+                      <div
+                        className="absolute right-0 mt-2 z-50 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-2"
+                        role="menu"
+                      >
+                        {overflowTabs.map((tab) => {
+                          const Icon = tab.icon;
+                          return (
+                            <button
+                              key={tab.id}
+                              role="menuitem"
+                              onClick={() => {
+                                setActiveTab(tab.id);
+                                setIsTabsMoreOpen(false);
+                              }}
+                              className={`w-full flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${activeTab === tab.id
+                                ? "bg-blue-50 text-blue-700"
+                                : "text-gray-700 hover:bg-gray-50"
+                                }`}
+                            >
+                              <Icon className="h-4 w-4 mr-2" />
+                              {tab.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </nav>
           </div>
 
