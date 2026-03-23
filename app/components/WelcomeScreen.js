@@ -139,21 +139,9 @@ function WelcomeScreen() {
       {/* Header */}
       <header className="relative z-10 flex justify-between items-center p-6">
         <div className="flex items-center space-x-3">
-          {companyLogo ? (
-            <Image
-              src={companyLogo}
-              className="rounded-lg"
-              alt="Company Logo"
-              width={40}
-              height={40}
-              unoptimized
-              style={{ width: 'auto' }}
-            />
-          ) : (
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
-          )}
+          <div className="p-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg">
+            <Star className="w-6 h-6 text-white fill-white" />
+          </div>
           <span className="text-lg font-semibold text-slate-800">
             Rating System
           </span>
@@ -194,9 +182,21 @@ function WelcomeScreen() {
           {/* Hero Section */}
           <div className="mb-12">
             <div className="flex items-center justify-center mb-6">
-              <div className="p-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg">
-                <Star className="w-12 h-12 text-white fill-white" />
-              </div>
+              {companyLogo ? (
+                <Image
+                  src={companyLogo}
+                  className="rounded-lg"
+                  alt="Company Logo"
+                  width={40}
+                  height={40}
+                  unoptimized
+                  style={{ width: 'auto' }}
+                />
+              ) : (
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+              )}
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight">

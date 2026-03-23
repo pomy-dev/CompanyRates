@@ -6,12 +6,15 @@ import { User, ArrowRight, Phone, Mail } from "lucide-react";
 import { useDataContext } from "../data-context";
 import { Button } from "./ui/button";
 import { Input } from "../components/ui/input";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Label } from "../components/ui/label";
@@ -24,7 +27,9 @@ import {
   insertFeedback,
   insertOther,
 } from "../../services/ratingService";
+import { sendSMS } from "../../services/smsService";
 import { supabase } from "../../services/supabaseService";
+import { getCompanyServicePointCriteria } from '../../services/companyService';
 import { DialogDescription } from "@radix-ui/react-dialog";
 
 function UserDetailsScreen() {
@@ -39,7 +44,7 @@ function UserDetailsScreen() {
   // New state for values that come from localStorage
   const [companyId, setCompanyId] = useState(null);
   const [branchId, setBranchId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true); // Optional: show loading until we read storage
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load company_id and branch_id from localStorage **only in the browser**
   useEffect(() => {
@@ -56,6 +61,10 @@ function UserDetailsScreen() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setData((prevData) => ({ ...prevData, [name]: value }));
+  };
+
+  const handlePhoneChange = (value) => {
+    setData((prev) => ({ ...prev, phoneNumber: value || "" }));
   };
 
   const cleaner = () => {
@@ -158,13 +167,17 @@ function UserDetailsScreen() {
       return;
     }
 
+    const companyDetails = await getCompanyServicePointCriteria(companyId);
+
     try {
       const user =
         !isEmptyObject(data?.ratings) && !isEmptyObject(data?.suggestionBox)
           ? await sendUser("both")
           : !isEmptyObject(data?.suggestionBox) && isEmptyObject(data?.ratings)
             ? await sendUser("suggestion_only")
-            : await sendUser("rating_only");
+            : !isEmptyObject(data?.ratings) && isEmptyObject(data?.suggestionBox)
+              ? await sendUser("rating_only")
+              : await sendUser("sms");
 
       if (user) {
         console.log("User from DB:", user);
@@ -233,7 +246,14 @@ function UserDetailsScreen() {
         }
 
         if (user === "sms") {
-          notification.smsSent(data?.phoneNumber);
+          try {
+            const resp = await sendSMS(data?.username, data?.phoneNumber, companyDetails?.company_name)
+
+            resp && notification.smsSent(data?.phoneNumber);
+          } catch (err) {
+            console.error(err.message);
+            notification.error(err.message)
+          }
         }
 
         cleaner();
@@ -304,14 +324,28 @@ function UserDetailsScreen() {
                   <Phone className="w-4 h-4" />
                   Phone Number *
                 </Label>
-                <Input
-                  id="phoneNumber"
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  name="phoneNumber"
+
+                <PhoneInput
+                  international
+                  defaultCountry="SZ"
                   value={phoneNumber}
-                  onChange={handleChange}
-                  className="h-12 text-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  onChange={handlePhoneChange}
+                  placeholder="Enter phone number"
+                  className="h-12 text-lg border-slate-200 focus:border-slate-500 focus:ring-slate-500"
+                  numberInputProps={{
+                    className: cn(
+                      "h-12 px-3 text-lg border-slate-200 rounded-r-md bg-transparent",
+                      "focus:border-slate-500 focus:ring-slate-500 focus:ring-2 focus:ring-offset-1",
+                      "placeholder:text-slate-400",
+                      "disabled:opacity-50"
+                    ),
+                  }}
+                  countrySelectProps={{
+                    className: cn(
+                      "h-12 px-3 border border-slate-200 rounded-l-md bg-slate-50/50",
+                      "hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                    ),
+                  }}
                 />
               </div>
 
