@@ -52,9 +52,7 @@ function WelcomeScreen() {
     const branch_id = localStorage.getItem("branch_id");
 
     if (!company_id || !branch_id) return;
-    // console.log("Fetching Branch Components for Company ID:", company_id, "Branch ID:", branch_id);
 
-    // Fetch company logo from local storage
     const branchSummary = await fetchBranchSummary(company_id, branch_id);
 
     const branchServicePoints = branchSummary?.service_points?.map((item) => ({
@@ -217,6 +215,7 @@ function WelcomeScreen() {
               <Button
                 onClick={handleStart}
                 size="lg"
+                disabled={companyLogo === null}
                 className="group inline-flex items-center gap-3 px-8 py-6 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               >
                 <Star className="w-5 h-5" />
@@ -228,6 +227,7 @@ function WelcomeScreen() {
                 onClick={handleDirectFeedback}
                 size="lg"
                 variant="outline"
+                disabled={companyLogo === null}
                 className="group inline-flex items-center gap-3 px-8 py-6 text-lg font-semibold border-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               >
                 <MessageSquare className="w-5 h-5" />
