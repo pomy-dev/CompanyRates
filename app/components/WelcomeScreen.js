@@ -45,6 +45,7 @@ function WelcomeScreen() {
   const { setData } = useDataContext();
   //show dailog :
   const [showDialog, setShowDialog] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
   const { notification } = useNotification();
 
   const fetchBranchComponents = async () => {
@@ -76,6 +77,8 @@ function WelcomeScreen() {
     const logoBase64 = localStorage?.getItem("company_logo_base64");
     if (logoBase64) {
       setCompanyLogo(logoBase64);
+    }else{
+      setLoggedIn(true)
     }
 
     if (!localStorage?.getItem("cachedDepartments")) {
@@ -324,6 +327,58 @@ function WelcomeScreen() {
                 <div className="font-bold">Rate Later</div>
                 <div className="text-sm opacity-70">
                   We'll send you a reminder via SMS
+                </div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
+      {/* Dialog Bottom Sheet to teel the user to login or admin to log in */}
+      {/* <Dialog open={loggedIn} onOpenChange={setLoggedIn}> */}
+      <Dialog open={loggedIn}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center mb-2">
+              Please login to have access
+            </DialogTitle>
+            <p className="text-slate-600 text-center">
+            All the service are locked,  they would be available once logged in
+            </p>
+          </DialogHeader>
+          <DialogDescription>
+          </DialogDescription>
+           <div className="flex flex-col gap-4 mt-6">
+            <Button
+              onClick={handleLogin}
+              className="group  flex items-center justify-center gap-4 bg-gradient-to-r from-blue-600 to-purple-600
+               hover:from-blue-700 hover:to-purple-700 text-white py-8 px-3 
+               rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl  "
+            >
+              <div className="p-2 bg-white/20 rounded-full">
+                <Star className="w-6 h-6" />
+              </div>
+              <div className="text-center">
+                <div className="font-bold">Login</div>
+                <div className="text-sm opacity-90 ">
+                  To have access to the services
+                </div>
+              </div>
+            </Button>
+
+            <Button
+              onClick={handleRateLater}
+              variant="outline"
+              className="group flex items-center justify-center gap-4 border-2 border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-800 py-8 px-3 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 bg-white hover:bg-slate-50"
+            >
+              <div className="p-2 bg-slate-100 rounded-full">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div className="text-center">
+                <div className="font-bold">Register company </div>
+                <div className="text-sm opacity-70">
+                  register your company service 
                 </div>
               </div>
             </Button>
