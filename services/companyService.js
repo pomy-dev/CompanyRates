@@ -182,12 +182,14 @@ export const getBranchByBarCode = async (branchCode, companyId) => {
 export const getRatingsByCriteriaIds = async (criteriaIds, branchId) => {
   if (!criteriaIds || criteriaIds.length === 0) return [];
 
-  // 3. Fetch all ratings in one query filtered by company + branch
-  const { data, error } = await supabase
+  let query = supabase
     .from("ratings")
     .select("rating_criteria_id, score")
-    .eq("branch_id", branchId)
     .in("rating_criteria_id", criteriaIds);
+
+  if (branchId) query = query.eq("branch_id", branchId);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching ratings:", error);
@@ -198,9 +200,9 @@ export const getRatingsByCriteriaIds = async (criteriaIds, branchId) => {
 }
 
 export const getRatings = async (companyId, branchId) => {
-  if (!branchId) return [];
+  if (!companyId) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("ratings")
     .select(`
       id,
@@ -218,8 +220,11 @@ export const getRatings = async (companyId, branchId) => {
       )
     `)
     .eq("company_id", companyId)
-    .eq("branch_id", branchId)
     .order("created_at", { ascending: false });
+
+  if (branchId) query = query.eq("branch_id", branchId);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching ratings:", error.message);

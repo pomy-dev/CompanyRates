@@ -18,6 +18,11 @@ import {
   ChevronDown,
   Menu,
   X,
+  Users,
+  Shield,
+  KeyRound,
+  Trash2,
+  Boxes,
 } from "lucide-react";
 import { useAuth } from "../../../app-context/auth-context";
 import {
@@ -58,13 +63,9 @@ function Dashboard() {
   const [suggestions, setSuggestions] = useState([]);
   const { user, loading: authLoading, logout } = useAuth();
   const [recentComments, setRecentComments] = useState([]);
-  const [distribution, setDistribution] = useState({
-    1: 0,
-    2: 0,
-    3: 0,
-    4: 0,
-    5: 0,
-  });
+  const companyId = user?.user_metadata?.company_id || user?.id;
+  const isSuperAdmin = !!user && companyId === user?.id;
+  const userDisplayName = user?.user_metadata?.full_name || user?.email || "User";
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -74,21 +75,281 @@ function Dashboard() {
   const [filterServicePoint, setFilterServicePoint] = useState("all");
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const [isTabsMoreOpen, setIsTabsMoreOpen] = useState(false);
+  
+  const selectedBranchName =
+    branches?.find(
+      (b) => String(b.branch_id) === String(selectedBranchId)
+    )?.branch_name || "";
+
+  const [distribution, setDistribution] = useState({
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+  });
+
+  const [allBranchesMonth, setAllBranchesMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+
+  const [allBranchesUniqueFeedbackers, setAllBranchesUniqueFeedbackers] = useState({
+    total: 0,
+    byBranchId: {},
+    comparePrevTotalDelta: null,
+    comparePrevTotalPct: null,
+  });
+
+  const [feedbackMonthlySeries, setFeedbackMonthlySeries] = useState({
+    months: [],
+    totalByMonth: [],
+    byBranchIdByMonth: {},
+  });
+
+  const [compareMonths, setCompareMonths] = useState(() => {
+    const now = new Date();
+    const b = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const a = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+    return { a, b };
+  });
+
+  const [adminAccounts, setAdminAccounts] = useState([]);
+  const [adminAccountsLoading, setAdminAccountsLoading] = useState(false);
+  const [adminAccountsError, setAdminAccountsError] = useState("");
+
+  const [newAccount, setNewAccount] = useState({
+    email: "",
+    password: "",
+    name: "",
+    role: "branch_admin",
+    branch_id: "",
+  });
+
+  const [editAccount, setEditAccount] = useState(null); // { id, email, name, role, branch_id }
+  const [editPassword, setEditPassword] = useState("");
+  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+  const [myPassword, setMyPassword] = useState("");
+  const [myPasswordLoading, setMyPasswordLoading] = useState(false);
+  const [myPasswordSuccess, setMyPasswordSuccess] = useState("");
+
+  const fetchAdminAccounts = async () => {
+    setAdminAccountsLoading(true);
+    setAdminAccountsError("");
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const token = sessionRes?.session?.access_token;
+      if (!token) {
+        setAdminAccountsError("Missing session token. Please re-login.");
+        return;
+      }
+
+      const res = await fetch("/api/admin/accounts", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Failed to load accounts.");
+
+      setAdminAccounts(Array.isArray(body?.data) ? body.data : []);
+    } catch (e) {
+      setAdminAccountsError(e.message || "Failed to load accounts.");
+    } finally {
+      setAdminAccountsLoading(false);
+    }
+  };
+
+  const createAdminAccount = async () => {
+    setAdminAccountsError("");
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const token = sessionRes?.session?.access_token;
+      if (!token) throw new Error("Missing session token. Please re-login.");
+
+      const payload = {
+        email: newAccount.email,
+        password: newAccount.password,
+        name: newAccount.name,
+        role: newAccount.role,
+        branch_id: newAccount.branch_id ? Number(newAccount.branch_id) : null,
+      };
+
+      const res = await fetch("/api/admin/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Failed to create account.");
+
+      setNewAccount({ email: "", password: "", name: "", role: "branch_admin", branch_id: "" });
+      await fetchAdminAccounts();
+    } catch (e) {
+      setAdminAccountsError(e.message || "Failed to create account.");
+    }
+  };
+
+  const updateAdminAccount = async (userId, updates) => {
+    setAdminAccountsError("");
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const token = sessionRes?.session?.access_token;
+      if (!token) throw new Error("Missing session token. Please re-login.");
+
+      const res = await fetch("/api/admin/accounts", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: userId, ...updates }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Failed to update account.");
+      if (isSuperAdmin) {
+        await fetchAdminAccounts();
+      }
+      return true;
+    } catch (e) {
+      setAdminAccountsError(e.message || "Failed to update account.");
+      return false;
+    }
+  };
+
+  const deleteAdminAccount = async (userId) => {
+    setAdminAccountsError("");
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const token = sessionRes?.session?.access_token;
+      if (!token) throw new Error("Missing session token. Please re-login.");
+
+      const res = await fetch(`/api/admin/accounts?user_id=${encodeURIComponent(userId)}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Failed to delete account.");
+      await fetchAdminAccounts();
+    } catch (e) {
+      setAdminAccountsError(e.message || "Failed to delete account.");
+    }
+  };
+
+  const [companyStructureLoading, setCompanyStructureLoading] = useState(false);
+  const [companyStructureError, setCompanyStructureError] = useState("");
+
+  const destroyCurrentBranchStructure = async () => {
+    setCompanyStructureError("");
+    if (!selectedBranchId) {
+      setCompanyStructureError("Select a branch first to destroy its structure.");
+      return;
+    }
+
+    const ok = window.confirm(
+      "This will delete the selected branch, its service points, and the criteria mappings (and collected ratings/feedback) for that branch. Continue?"
+    );
+    if (!ok) return;
+
+    setCompanyStructureLoading(true);
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const token = sessionRes?.session?.access_token;
+      if (!token) throw new Error("Missing session token. Please re-login.");
+
+      const res = await fetch(
+        `/api/admin/company-structure?branch_id=${encodeURIComponent(selectedBranchId)}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Failed to destroy branch structure.");
+
+      // Clear cached branch-dependent data
+      localStorage.removeItem("cachedRatings");
+      localStorage.removeItem("cachedComments");
+      localStorage.removeItem("cachedOtherData");
+      localStorage.removeItem("cachedServicePoints");
+      localStorage.removeItem("cachedBranches");
+
+      window.location.reload();
+    } catch (e) {
+      setCompanyStructureError(e.message || "Failed to destroy branch structure.");
+    } finally {
+      setCompanyStructureLoading(false);
+    }
+  };
+
+  const resetCompanyStructure = async () => {
+    setCompanyStructureError("");
+
+    const ok = window.confirm(
+      "This will reset/destroy the entire company structure (all branches, their service points, and criteria mappings), including collected ratings/feedback. Continue?"
+    );
+    if (!ok) return;
+
+    setCompanyStructureLoading(true);
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const token = sessionRes?.session?.access_token;
+      if (!token) throw new Error("Missing session token. Please re-login.");
+
+      const res = await fetch("/api/admin/company-structure", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ mode: "reset_all" }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Failed to reset company structure.");
+
+      localStorage.removeItem("cachedRatings");
+      localStorage.removeItem("cachedComments");
+      localStorage.removeItem("cachedOtherData");
+      localStorage.removeItem("cachedServicePoints");
+      localStorage.removeItem("cachedBranches");
+
+      window.location.reload();
+    } catch (e) {
+      setCompanyStructureError(e.message || "Failed to reset company structure.");
+    } finally {
+      setCompanyStructureLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
-    const branchId = localStorage.getItem("branch_id") || "";
-    setSelectedBranchId(branchId);
+    const storedBranchId = localStorage.getItem("branch_id") || "";
+    if (!selectedBranchId) {
+      setSelectedBranchId(storedBranchId);
+    }
+    const branchId = selectedBranchId || storedBranchId;
+    const companyId = user?.user_metadata?.company_id || user?.id;
 
     try {
-      authLoading && setIsLoading(true);
+      setIsLoading(true);
       setAction("Loading dashboard data...");
 
       // Fetch company service points with respective criteria
       async function fetchServicePoints() {
         try {
-          const companyId = user?.id;
-
           // Fetch company data
           const retrievedCompanyData = await getCompanyServicePointCriteria(
             companyId
@@ -147,7 +408,7 @@ function Dashboard() {
       // Fetch comppany branches
       async function fetchCompanyBranches() {
         try {
-          const branchesData = await fetchBranches(user?.id);
+          const branchesData = await fetchBranches(companyId);
           if (!branchesData) return;
           setBranches(branchesData);
         } catch (error) {
@@ -157,7 +418,7 @@ function Dashboard() {
 
       // Fetch ratings from the ratings table
       async function fetchRatings() {
-        const ratingData = await getRatings(user?.id, branchId);
+        const ratingData = await getRatings(companyId, branchId);
 
         if (!ratingData) {
           setError('Failed to fetch ratings');
@@ -208,24 +469,27 @@ function Dashboard() {
       // Fetch comments from the Feedback table
       async function fetchComments() {
 
-        const { data, error } = await supabase
+        let query = supabase
           .from("feedback")
           .select(`
-          id, 
-          created_at, 
-          rating_id, 
-          comments, 
-          suggestions, 
-          user:user_id(
             id, 
-            name, 
-            phone
-          ), 
-          company_id, 
-          branch_id
-        `)
-          .eq("company_id", user?.id)
-          .eq("branch_id", branchId);
+            created_at, 
+            rating_id, 
+            comments, 
+            suggestions, 
+            user:user_id(
+              id, 
+              name, 
+              phone
+            ), 
+            company_id, 
+            branch_id
+          `)
+          .eq("company_id", companyId);
+
+        if (branchId) query = query.eq("branch_id", branchId);
+
+        const { data, error } = await query;
 
         if (error) {
           setError(error.message);
@@ -277,11 +541,14 @@ function Dashboard() {
 
       // Fetch all Other data
       async function fetchOtherData() {
-        const { data: otherData, error: otherError } = await supabase
+        let query = supabase
           .from("other")
           .select("*")
-          .eq("company_id", user.id)
-          .eq("branch_id", branchId);
+          .eq("company_id", companyId);
+
+        if (branchId) query = query.eq("branch_id", branchId);
+
+        const { data: otherData, error: otherError } = await query;
 
         if (otherError) {
           setError(otherError.message);
@@ -299,10 +566,137 @@ function Dashboard() {
 
       // Fetch all users/raters
       async function fetchUsers() {
-        const raters = await getAllUsersByCompanyBranchId(user?.id, branchId);
+        const raters = await getAllUsersByCompanyBranchId(companyId, branchId);
         if (!raters) return;
 
         setUsers(raters);
+      }
+
+      async function fetchAllBranchesUniqueFeedbackers() {
+        // Only meaningful when branch is NOT selected (head office view)
+        if (branchId) return;
+
+        const [y, m] = (allBranchesMonth || "").split("-").map((v) => parseInt(v, 10));
+        if (!y || !m) return;
+
+        const start = new Date(y, m - 1, 1);
+        const end = new Date(y, m, 1);
+        const prevStart = new Date(y, m - 2, 1);
+        const prevEnd = new Date(y, m - 1, 1);
+
+        const [currRes, prevRes] = await Promise.all([
+          supabase
+            .from("feedback")
+            .select("user_id, branch_id, created_at")
+            .eq("company_id", companyId)
+            .gte("created_at", start.toISOString())
+            .lt("created_at", end.toISOString()),
+          supabase
+            .from("feedback")
+            .select("user_id, branch_id, created_at")
+            .eq("company_id", companyId)
+            .gte("created_at", prevStart.toISOString())
+            .lt("created_at", prevEnd.toISOString()),
+        ]);
+
+        if (currRes.error) {
+          console.error("Error fetching feedback (current month):", currRes.error.message);
+          return;
+        }
+        if (prevRes.error) {
+          console.error("Error fetching feedback (previous month):", prevRes.error.message);
+          // We can still show current month without comparison
+        }
+
+        const byBranchId = {};
+        const totalSet = new Set();
+
+        (currRes.data || []).forEach((row) => {
+          if (!row?.user_id) return;
+          totalSet.add(row.user_id);
+          const b = row.branch_id ?? "unknown";
+          if (!byBranchId[b]) byBranchId[b] = new Set();
+          byBranchId[b].add(row.user_id);
+        });
+
+        const byBranchCounts = Object.fromEntries(
+          Object.entries(byBranchId).map(([k, set]) => [k, set.size])
+        );
+
+        let comparePrevTotalDelta = null;
+        let comparePrevTotalPct = null;
+        if (prevRes?.data) {
+          const prevSet = new Set();
+          prevRes.data.forEach((row) => {
+            if (row?.user_id) prevSet.add(row.user_id);
+          });
+          const prevTotal = prevSet.size;
+          const currTotal = totalSet.size;
+          comparePrevTotalDelta = currTotal - prevTotal;
+          comparePrevTotalPct = prevTotal > 0 ? ((currTotal - prevTotal) / prevTotal) * 100 : null;
+        }
+
+        setAllBranchesUniqueFeedbackers({
+          total: totalSet.size,
+          byBranchId: byBranchCounts,
+          comparePrevTotalDelta,
+          comparePrevTotalPct,
+        });
+      }
+
+      async function fetchMonthlyUniqueFeedbackersSeries() {
+        const monthKeys = getLastNMonthKeys(12);
+        const earliest = monthKeys[0];
+        const [ey, em] = (earliest || "").split("-").map((v) => parseInt(v, 10));
+        if (!ey || !em) return;
+
+        const start = new Date(ey, em - 1, 1);
+        const end = new Date();
+
+        let query = supabase
+          .from("feedback")
+          .select("user_id, branch_id, created_at")
+          .eq("company_id", companyId)
+          .gte("created_at", start.toISOString())
+          .lte("created_at", end.toISOString());
+
+        if (branchId) query = query.eq("branch_id", branchId);
+
+        const { data, error } = await query;
+        if (error) {
+          console.error("Error fetching monthly feedback series:", error.message);
+          return;
+        }
+
+        const totalSetsByMonth = Object.fromEntries(monthKeys.map((k) => [k, new Set()]));
+        const branchSetsByMonth = {};
+
+        (data || []).forEach((row) => {
+          if (!row?.user_id || !row?.created_at) return;
+          const d = new Date(row.created_at);
+          const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+          if (!totalSetsByMonth[mk]) return;
+
+          totalSetsByMonth[mk].add(row.user_id);
+
+          const b = row.branch_id ?? "unknown";
+          if (!branchSetsByMonth[b]) {
+            branchSetsByMonth[b] = Object.fromEntries(monthKeys.map((k) => [k, new Set()]));
+          }
+          branchSetsByMonth[b][mk].add(row.user_id);
+        });
+
+        const totalByMonth = monthKeys.map((k) => totalSetsByMonth[k]?.size ?? 0);
+        const byBranchIdByMonth = {};
+        Object.entries(branchSetsByMonth).forEach(([b, sets]) => {
+          byBranchIdByMonth[b] = monthKeys.map((k) => sets[k]?.size ?? 0);
+        });
+
+        setFeedbackMonthlySeries({
+          months: monthKeys,
+          totalByMonth,
+          byBranchIdByMonth,
+        });
       }
 
       fetchUsers();
@@ -311,12 +705,14 @@ function Dashboard() {
       fetchRatings();
       fetchServicePoints();
       fetchCompanyBranches();
+      fetchAllBranchesUniqueFeedbackers();
+      fetchMonthlyUniqueFeedbackersSeries();
     } catch (error) {
       console.error("Error in Dashboard useEffect:", error.message);
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, selectedBranchId, allBranchesMonth]);
 
   const activeServicePoints = companyData?.CompanyServicePoints?.filter((sp) => sp.isActive).length || 0;
 
@@ -332,6 +728,93 @@ function Dashboard() {
         c.suggestions.trim() !== ""
     ).length
     : 0;
+
+  const allBranchesMonthLabel = (() => {
+    const [y, m] = (allBranchesMonth || "").split("-");
+    if (!y || !m) return "Selected month";
+    const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+    return d.toLocaleString(undefined, { month: "long", year: "numeric" });
+  })();
+
+  const allBranchesFeedbackersBarData = (() => {
+    const labels =
+      (branches || []).map((b) => b.branch_name || `Branch ${b.branch_id}`);
+    const data =
+      (branches || []).map((b) => {
+        const key = b.branch_id;
+        return allBranchesUniqueFeedbackers.byBranchId?.[key] ?? 0;
+      });
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Unique feedback providers",
+          data,
+          backgroundColor: "#3B82F6",
+        },
+      ],
+    };
+  })();
+
+  const allBranchesMonthlyFeedbackersChartData = (() => {
+    const labels = feedbackMonthlySeries.months.map(monthKeyToLabel);
+    return {
+      labels,
+      datasets: [
+        {
+          label: selectedBranchId ? "Unique feedback providers (current branch)" : "Unique feedback providers (all branches)",
+          data: feedbackMonthlySeries.totalByMonth,
+          backgroundColor: "#2563EB",
+        },
+      ],
+    };
+  })();
+
+  const perBranchMonthlyFeedbackersChartData = (() => {
+    const labels = feedbackMonthlySeries.months.map(monthKeyToLabel);
+    const branchLabels = (branches || []).map((b) => ({
+      id: b.branch_id,
+      name: b.branch_name || `Branch ${b.branch_id}`,
+    }));
+
+    const palette = ["#2563EB", "#10B981", "#F59E0B", "#8B5CF6", "#EF4444", "#14B8A6", "#0EA5E9", "#A3E635"];
+
+    const datasets = branchLabels.map((b, idx) => ({
+      label: b.name,
+      data: feedbackMonthlySeries.byBranchIdByMonth?.[b.id] || new Array(labels.length).fill(0),
+      backgroundColor: palette[idx % palette.length],
+    }));
+
+    return { labels, datasets };
+  })();
+
+  const getCountForMonth = (branchId, monthKey) => {
+    const monthIndex = feedbackMonthlySeries.months.indexOf(monthKey);
+    if (monthIndex < 0) return 0;
+    if (!branchId) return feedbackMonthlySeries.totalByMonth?.[monthIndex] ?? 0;
+    return feedbackMonthlySeries.byBranchIdByMonth?.[branchId]?.[monthIndex] ?? 0;
+  };
+
+  const compareMonthLabel = `${monthKeyToLabel(compareMonths.a)} → ${monthKeyToLabel(compareMonths.b)}`;
+
+  const branchCompareRows = (() => {
+    const a = compareMonths.a;
+    const b = compareMonths.b;
+    if (!a || !b) return [];
+
+    return (branches || [])
+      .map((br) => {
+        const id = br.branch_id;
+        const name = br.branch_name || `Branch ${id}`;
+        const aCount = getCountForMonth(id, a);
+        const bCount = getCountForMonth(id, b);
+        const delta = bCount - aCount;
+        const pct = aCount > 0 ? (delta / aCount) * 100 : null;
+        return { id, name, aCount, bCount, delta, pct };
+      })
+      .sort((x, y) => y.bCount - x.bCount);
+  })();
 
   const getFilteredRatings = (data, criteria, servicePoint, search) => {
     let filtered = data || [];
@@ -412,6 +895,8 @@ function Dashboard() {
 
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "access", label: "Access", icon: Users },
+    { id: "branches", label: "Branches", icon: Building2 },
     { id: "service-points", label: "Service Points", icon: Target },
     { id: "ratings", label: "Ratings", icon: Star },
     { id: "comments", label: "Comments", icon: MessageSquare },
@@ -421,6 +906,23 @@ function Dashboard() {
 
   const primaryTabs = tabs.slice(0, 2);
   const overflowTabs = tabs.slice(2);
+
+  function monthKeyToLabel(key) {
+    const [y, m] = (key || "").split("-");
+    if (!y || !m) return key;
+    const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+    return d.toLocaleString(undefined, { month: "short", year: "numeric" });
+  }
+
+  const getLastNMonthKeys = (n) => {
+    const now = new Date();
+    const keys = [];
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    }
+    return keys;
+  };
 
   // if (authLoading) {
   //   return (
@@ -517,8 +1019,8 @@ function Dashboard() {
       localStorage.removeItem("cachedRatings");
       localStorage.removeItem("cachedComments");
       localStorage.removeItem("cachedOtherData");
-      // Reload the page to apply changes
-      window.location.reload();
+      localStorage.removeItem("cachedServicePoints");
+      localStorage.removeItem("cachedBranches");
     } catch (error) {
       console.error("Error switching branch:", error);
     } finally {
@@ -645,33 +1147,46 @@ function Dashboard() {
 
             {/* Desktop header actions */}
             <div className="hidden lg:flex items-center space-x-4">
-              {/* Branch Selector */}
-              {branches?.length > 0 && (
-                <div className="relative">
-                  <select
-                    value={selectedBranchId}
-                    onChange={(e) => handleSwitchBranch(e.target.value)}
-                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+              {isSuperAdmin ? (
+                <>
+                  {/* Branch Selector */}
+                  {branches?.length > 0 && (
+                    <div className="relative">
+                      <select
+                        value={selectedBranchId}
+                        onChange={(e) => handleSwitchBranch(e.target.value)}
+                        className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                      >
+                        <option value="">Select Branch</option>
+                        {branches.map((branch, index) => (
+                          <option key={index} value={branch.branch_id}>
+                            {branch.branch_name}-branch
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  )}
+
+                  {/* Add Branch Button */}
+                  <button
+                    onClick={() => setShowBranchModal(true)}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
                   >
-                    <option value="">Select Branch</option>
-                    {branches.map((branch, index) => (
-                      <option key={index} value={branch.branch_id}>
-                        {branch.branch_name}-branch
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Branch
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <div className="text-sm font-medium text-gray-900">
+                    {userDisplayName}
+                  </div>
+                  <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg">
+                    {selectedBranchName || "Branch"}
+                  </div>
                 </div>
               )}
-
-              {/* Add Branch Button */}
-              <button
-                onClick={() => setShowBranchModal(true)}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Branch
-              </button>
 
               <button
                 onClick={handleLogout}
@@ -718,40 +1233,54 @@ function Dashboard() {
               </div>
 
               <div className="pt-4 space-y-4">
-                {branches?.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-gray-500 mb-2">Branch</div>
-                    <div className="relative">
-                      <select
-                        value={selectedBranchId}
-                        onChange={(e) => {
-                          handleSwitchBranch(e.target.value);
-                          setIsHeaderMenuOpen(false);
-                        }}
-                        className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
-                      >
-                        <option value="">Select Branch</option>
-                        {branches.map((branch, index) => (
-                          <option key={index} value={branch.branch_id}>
-                            {branch.branch_name}-branch
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                {isSuperAdmin ? (
+                  <>
+                    {branches?.length > 0 && (
+                      <div>
+                        <div className="text-xs font-medium text-gray-500 mb-2">Branch</div>
+                        <div className="relative">
+                          <select
+                            value={selectedBranchId}
+                            onChange={(e) => {
+                              handleSwitchBranch(e.target.value);
+                              setIsHeaderMenuOpen(false);
+                            }}
+                            className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                          >
+                            <option value="">Select Branch</option>
+                            {branches.map((branch, index) => (
+                              <option key={index} value={branch.branch_id}>
+                                {branch.branch_name}-branch
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setShowBranchModal(true);
+                        setIsHeaderMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Branch
+                    </button>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Signed in as</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {userDisplayName}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Branch: {selectedBranchName || "—"}
                     </div>
                   </div>
                 )}
-
-                <button
-                  onClick={() => {
-                    setShowBranchModal(true);
-                    setIsHeaderMenuOpen(false);
-                  }}
-                  className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Branch
-                </button>
 
                 <button
                   onClick={handleLogout}
@@ -940,6 +1469,87 @@ function Dashboard() {
             {/* Overview Tab */}
             {activeTab === "overview" && (
               <div className="space-y-8">
+                {!selectedBranchId && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          All branches overview
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          You’re logged in without a branch code. Stats below summarize all branches.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">Month</label>
+                        <input
+                          type="month"
+                          value={allBranchesMonth}
+                          onChange={(e) => setAllBranchesMonth(e.target.value)}
+                          className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <div className="bg-white rounded-xl border border-gray-100 p-4">
+                        <div className="text-sm text-gray-600">Unique feedback providers</div>
+                        <div className="text-3xl font-bold text-gray-900 mt-1">
+                          {allBranchesUniqueFeedbackers.total}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {allBranchesMonthLabel}
+                          {typeof allBranchesUniqueFeedbackers.comparePrevTotalDelta === "number" && (
+                            <>
+                              {" "}
+                              • Compared to last month:{" "}
+                              <span className={allBranchesUniqueFeedbackers.comparePrevTotalDelta >= 0 ? "text-emerald-700" : "text-red-700"}>
+                                {allBranchesUniqueFeedbackers.comparePrevTotalDelta >= 0 ? "+" : ""}
+                                {allBranchesUniqueFeedbackers.comparePrevTotalDelta}
+                                {typeof allBranchesUniqueFeedbackers.comparePrevTotalPct === "number" && (
+                                  <>
+                                    {" "}
+                                    ({allBranchesUniqueFeedbackers.comparePrevTotalPct >= 0 ? "+" : ""}
+                                    {allBranchesUniqueFeedbackers.comparePrevTotalPct.toFixed(1)}%)
+                                  </>
+                                )}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-gray-100 p-4 lg:col-span-2">
+                        <div className="text-sm font-medium text-gray-900 mb-2">
+                          Branch comparison (unique feedback providers)
+                        </div>
+                        <div className="w-full">
+                          <Bar
+                            data={allBranchesFeedbackersBarData}
+                            options={{
+                              responsive: true,
+                              plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                  callbacks: {
+                                    label: (ctx) => ` ${ctx.raw} people`,
+                                  },
+                                },
+                              },
+                              scales: {
+                                y: { beginAtZero: true, ticks: { precision: 0 } },
+                              },
+                            }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-600 mt-2">
+                          Labels show each branch name; bars show the number of distinct people who submitted feedback during {allBranchesMonthLabel}.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Company Info Pie Chart */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div>
@@ -1081,6 +1691,584 @@ function Dashboard() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Access Tab */}
+            {activeTab === "access" && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-blue-600" />
+                      Access management
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Create staff accounts, update roles/branches, reset passwords, and delete accounts. Only super admin can do this.
+                    </p>
+                  </div>
+                  {isSuperAdmin && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await fetchAdminAccounts();
+                        }}
+                        className="inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {adminAccountsError && (
+                  <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-sm text-red-700">
+                    {adminAccountsError}
+                  </div>
+                )}
+
+                {!isSuperAdmin && (
+                  <div className="bg-white rounded-xl p-4 border border-gray-100">
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      Update password
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      You can update only your own password.
+                    </p>
+
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          New password
+                        </label>
+                        <input
+                          type="password"
+                          value={myPassword}
+                          onChange={(e) => {
+                            setMyPasswordSuccess("");
+                            setMyPassword(e.target.value);
+                          }}
+                          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          placeholder="Enter new password"
+                        />
+                      </div>
+
+                      {myPasswordSuccess && (
+                        <div className="text-sm text-emerald-700">
+                          {myPasswordSuccess}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setMyPasswordSuccess("");
+                          if (!myPassword?.trim()) {
+                            setAdminAccountsError("Please enter a new password.");
+                            return;
+                          }
+                          setMyPasswordLoading(true);
+                          try {
+                            const ok = await updateAdminAccount(user?.id, {
+                              password: myPassword,
+                            });
+                            if (ok) {
+                              setMyPassword("");
+                              setMyPasswordSuccess("Password updated.");
+                            }
+                          } finally {
+                            setMyPasswordLoading(false);
+                          }
+                        }}
+                        disabled={myPasswordLoading}
+                        className={`w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors ${myPasswordLoading
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
+                      >
+                        {myPasswordLoading ? "Updating..." : "Update password"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isSuperAdmin && (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Create account</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={newAccount.email}
+                            onChange={(e) => setNewAccount((p) => ({ ...p, email: e.target.value }))}
+                            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            placeholder="staff@company.com"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Temporary password</label>
+                          <input
+                            type="password"
+                            value={newAccount.password}
+                            onChange={(e) => setNewAccount((p) => ({ ...p, password: e.target.value }))}
+                            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            placeholder="Set a temp password"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Full name (optional)</label>
+                          <input
+                            type="text"
+                            value={newAccount.name}
+                            onChange={(e) => setNewAccount((p) => ({ ...p, name: e.target.value }))}
+                            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            placeholder="Jane Doe"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+                            <select
+                              value={newAccount.role}
+                              onChange={(e) => setNewAccount((p) => ({ ...p, role: e.target.value }))}
+                              className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            >
+                              <option value="branch_admin">Branch admin</option>
+                              <option value="viewer">Viewer</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Branch (optional)</label>
+                            <select
+                              value={newAccount.branch_id}
+                              onChange={(e) => setNewAccount((p) => ({ ...p, branch_id: e.target.value }))}
+                              className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            >
+                              <option value="">All / none</option>
+                              {(branches || []).map((b, idx) => (
+                                <option key={idx} value={b.branch_id}>
+                                  {b.branch_name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={createAdminAccount}
+                          className="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          Create staff account
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-4 border border-gray-100 lg:col-span-2 overflow-x-auto">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-900">Accounts</h4>
+                        {adminAccountsLoading && (
+                          <div className="text-xs text-gray-500">Loading…</div>
+                        )}
+                      </div>
+                      <table className="min-w-[860px] w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-gray-600">
+                            <th className="py-2 pr-4">Email</th>
+                            <th className="py-2 pr-4">Name</th>
+                            <th className="py-2 pr-4">Role</th>
+                            <th className="py-2 pr-4">Branch</th>
+                            <th className="py-2 pr-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adminAccounts.map((a) => (
+                            <tr key={a.id} className="border-t border-gray-100">
+                              <td className="py-2 pr-4 text-gray-900">{a.email}</td>
+                              <td className="py-2 pr-4 text-gray-700">{a.name || "—"}</td>
+                              <td className="py-2 pr-4 text-gray-700">{a.role}</td>
+                              <td className="py-2 pr-4 text-gray-700">
+                                {a.branch_id ? (branches || []).find((b) => b.branch_id === a.branch_id)?.branch_name || a.branch_id : "—"}
+                              </td>
+                              <td className="py-2 pr-4">
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditAccount(a);
+                                      setEditPassword("");
+                                      setIsAccessModalOpen(true);
+                                    }}
+                                    className="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                  >
+                                    <KeyRound className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </button>
+                                  {a.role !== "super_admin" && (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        const ok = window.confirm(`Delete account ${a.email}? This cannot be undone.`);
+                                        if (!ok) return;
+                                        await deleteAdminAccount(a.id);
+                                      }}
+                                      className="inline-flex items-center px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {adminAccounts.length === 0 && !adminAccountsLoading && (
+                            <tr>
+                              <td colSpan={5} className="py-6 text-center text-gray-500">
+                                No staff accounts found (or you are not super admin).
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {isSuperAdmin && (
+                  <>
+                    {/* Company structure reset */}
+                    <div className="bg-white rounded-xl p-4 border border-gray-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                            <Boxes className="h-5 w-5 text-blue-600" />
+                            Company structure
+                          </h4>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Destroy branches, their service points, and criteria mappings. This also clears collected ratings/feedback for the destroyed scope.
+                          </p>
+                        </div>
+                        {companyStructureLoading ? (
+                          <div className="text-sm text-gray-600">Working…</div>
+                        ) : (
+                          <div className="text-xs text-gray-500">
+                            Selected branch: <span className="font-medium text-gray-900">{selectedBranchId || "All / none"}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {companyStructureError && (
+                        <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-700">
+                          {companyStructureError}
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                        <button
+                          type="button"
+                          onClick={destroyCurrentBranchStructure}
+                          disabled={companyStructureLoading || !selectedBranchId}
+                          className={`w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors ${companyStructureLoading || !selectedBranchId
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-red-600 text-white hover:bg-red-700"
+                            }`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Destroy selected branch
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={resetCompanyStructure}
+                          disabled={companyStructureLoading}
+                          className={`w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors ${companyStructureLoading
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-emerald-600 text-white hover:bg-emerald-700"
+                            }`}
+                        >
+                          <Shield className="h-4 w-4 mr-2" />
+                          Reset entire company
+                        </button>
+                      </div>
+                    </div>
+
+                    {isAccessModalOpen && editAccount && (
+                      <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+                        <div className="absolute inset-0 bg-black/40" onClick={() => setIsAccessModalOpen(false)} />
+                        <div className="absolute left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl border border-gray-200 p-4">
+                          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                            <div className="font-semibold text-gray-900">Edit account</div>
+                            <button
+                              type="button"
+                              onClick={() => setIsAccessModalOpen(false)}
+                              className="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                          <div className="pt-4 space-y-3">
+                            <div className="text-sm text-gray-600">
+                              Editing{" "}
+                              <span className="font-medium text-gray-900">
+                                {editAccount.email}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Name
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editAccount.name || ""}
+                                  onChange={(e) =>
+                                    setEditAccount((p) => ({
+                                      ...p,
+                                      name: e.target.value,
+                                    }))
+                                  }
+                                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Role
+                                </label>
+                                <select
+                                  value={editAccount.role || "branch_admin"}
+                                  onChange={(e) =>
+                                    setEditAccount((p) => ({
+                                      ...p,
+                                      role: e.target.value,
+                                    }))
+                                  }
+                                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                >
+                                  <option value="branch_admin">
+                                    Branch admin
+                                  </option>
+                                  <option value="viewer">Viewer</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Branch
+                              </label>
+                              <select
+                                value={editAccount.branch_id || ""}
+                                onChange={(e) =>
+                                  setEditAccount((p) => ({
+                                    ...p,
+                                    branch_id: e.target.value
+                                      ? Number(e.target.value)
+                                      : null,
+                                  }))
+                                }
+                                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                              >
+                                <option value="">All / none</option>
+                                {(branches || []).map((b, idx) => (
+                                  <option key={idx} value={b.branch_id}>
+                                    {b.branch_name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                New password (optional)
+                              </label>
+                              <input
+                                type="password"
+                                value={editPassword}
+                                onChange={(e) =>
+                                  setEditPassword(e.target.value)
+                                }
+                                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                placeholder="Leave blank to keep existing password"
+                              />
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await updateAdminAccount(editAccount.id, {
+                                    name: editAccount.name || "",
+                                    role: editAccount.role,
+                                    branch_id:
+                                      editAccount.branch_id || null,
+                                    password: editPassword || undefined,
+                                  });
+                                  setIsAccessModalOpen(false);
+                                }}
+                                className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                              >
+                                Save changes
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setIsAccessModalOpen(false)}
+                                className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+
+                            <div className="text-xs text-gray-500">
+                              Password changes and deletes are enforced
+                              server-side and restricted to super admin.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Branches Tab */}
+            {activeTab === "branches" && (
+              <div className="space-y-8">
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Branch analytics</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Monthly unique people who provided feedback.
+                      {selectedBranchId ? " (Current branch only)" : " (All branches)"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700">Compare A</label>
+                      <input
+                        type="month"
+                        value={compareMonths.a}
+                        onChange={(e) => setCompareMonths((p) => ({ ...p, a: e.target.value }))}
+                        className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700">Compare B</label>
+                      <input
+                        type="month"
+                        value={compareMonths.b}
+                        onChange={(e) => setCompareMonths((p) => ({ ...p, b: e.target.value }))}
+                        className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-100 p-4">
+                  <div className="text-sm font-medium text-gray-900 mb-2">12 month trend</div>
+                  <Bar
+                    data={allBranchesMonthlyFeedbackersChartData}
+                    options={{
+                      responsive: true,
+                      plugins: {
+                        legend: { position: "top" },
+                        tooltip: {
+                          callbacks: {
+                            label: (ctx) => ` ${ctx.raw} people`,
+                          },
+                        },
+                      },
+                      scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                      },
+                    }}
+                  />
+                  <div className="text-xs text-gray-600 mt-2">
+                    Each bar is the count of distinct `feedback.user_id` entries for that month.
+                  </div>
+                </div>
+
+                {!selectedBranchId && (
+                  <>
+                    <div className="bg-white rounded-xl border border-gray-100 p-4">
+                      <div className="text-sm font-medium text-gray-900 mb-2">
+                        By branch — monthly chart
+                      </div>
+                      <Bar
+                        data={perBranchMonthlyFeedbackersChartData}
+                        options={{
+                          responsive: true,
+                          plugins: {
+                            legend: { position: "bottom" },
+                            tooltip: {
+                              callbacks: {
+                                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}`,
+                              },
+                            },
+                          },
+                          scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 } },
+                          },
+                        }}
+                      />
+                      <div className="text-xs text-gray-600 mt-2">
+                        Labels identify the branch; values are distinct people who submitted feedback per month.
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-100 p-4 overflow-x-auto">
+                      <div className="text-sm font-medium text-gray-900 mb-3">
+                        Branch-by-branch comparison: {compareMonthLabel}
+                      </div>
+                      <table className="min-w-[720px] w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-gray-600">
+                            <th className="py-2 pr-4">Branch</th>
+                            <th className="py-2 pr-4">{monthKeyToLabel(compareMonths.a)}</th>
+                            <th className="py-2 pr-4">{monthKeyToLabel(compareMonths.b)}</th>
+                            <th className="py-2 pr-4">Δ</th>
+                            <th className="py-2 pr-4">% change</th>
+                            <th className="py-2 pr-4">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {branchCompareRows.map((r) => (
+                            <tr key={r.id} className="border-t border-gray-100">
+                              <td className="py-2 pr-4 font-medium text-gray-900">{r.name}</td>
+                              <td className="py-2 pr-4 text-gray-700">{r.aCount}</td>
+                              <td className="py-2 pr-4 text-gray-700">{r.bCount}</td>
+                              <td className={`py-2 pr-4 ${r.delta >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                {r.delta >= 0 ? "+" : ""}
+                                {r.delta}
+                              </td>
+                              <td className="py-2 pr-4 text-gray-700">
+                                {typeof r.pct === "number"
+                                  ? `${r.pct >= 0 ? "+" : ""}${r.pct.toFixed(1)}%`
+                                  : "—"}
+                              </td>
+                              <td className="py-2 pr-4 text-gray-600">
+                                {r.delta === 0
+                                  ? `No change (${r.bCount} vs ${r.aCount}).`
+                                  : r.delta > 0
+                                    ? `Increase of ${r.delta} people in ${monthKeyToLabel(compareMonths.b)} vs ${monthKeyToLabel(compareMonths.a)}.`
+                                    : `Decrease of ${Math.abs(r.delta)} people in ${monthKeyToLabel(compareMonths.b)} vs ${monthKeyToLabel(compareMonths.a)}.`}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

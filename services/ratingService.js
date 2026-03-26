@@ -16,11 +16,14 @@ export const insertUser = async (userData) => {
 };
 
 export const getAllUsersByCompanyBranchId = async (companyId, branchId) => {
-  const { data, error } = await supabase
+  let query = supabase
     .from('users')
     .select('*')
-    .eq('company_id', companyId)
-    .eq('branch_id', branchId)
+    .eq('company_id', companyId);
+
+  if (branchId) query = query.eq('branch_id', branchId);
+
+  const { data, error } = await query;
 
   if (error) throw error.message;
 

@@ -95,7 +95,12 @@ function LoginForm() {
       });
 
       if (!data) return;
-      const branch = await getBranchByBarCode(formData?.branchCode?.trim(), data?.user?.id);
+      const companyId =
+        data?.user?.user_metadata?.company_id || data?.user?.id;
+      const branch = await getBranchByBarCode(
+        formData?.branchCode?.trim(),
+        companyId
+      );
 
       if (branch) localStorage.setItem("branch_id", branch?.id);
 

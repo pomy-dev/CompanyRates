@@ -106,7 +106,10 @@ export function AuthProvider({ children }) {
     if (error) throw error;
 
     // set company id to localStorage
-    localStorage.setItem("company_id", data.user.id);
+    // - for super admin (company owner), company_id == user.id
+    // - for staff accounts, company_id should come from user metadata
+    const companyId = data?.user?.user_metadata?.company_id || data.user.id;
+    localStorage.setItem("company_id", companyId);
 
     //deleting to force cache miss in welcome page
     localStorage.removeItem("cachedDepartments");
