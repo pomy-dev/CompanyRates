@@ -95,20 +95,11 @@ function LoginForm() {
       });
 
       if (!data) return;
-      const companyId =
-        data?.user?.user_metadata?.company_id || data?.user?.id;
-      const branch = await getBranchByBarCode(
-        formData?.branchCode?.trim(),
-        companyId
-      );
-
-      if (branch) localStorage.setItem("branch_id", branch?.id);
 
       alert("Login Successful!");
       await fetchLogoPathAndCache();
 
       router.push("/dashboard");
-
     } catch (error) {
       setLoading(false);
       setError(error.message);

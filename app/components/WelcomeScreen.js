@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Menu,
   Building2,
+  UserCog,
   Heart,
   Users,
   TrendingUp,
@@ -77,7 +78,7 @@ function WelcomeScreen() {
     const logoBase64 = localStorage?.getItem("company_logo_base64");
     if (logoBase64) {
       setCompanyLogo(logoBase64);
-    }else{
+    } else {
       setLoggedIn(true)
     }
 
@@ -103,7 +104,7 @@ function WelcomeScreen() {
     };
   }, [menuOpen]);
 
-  const handleLogin = () => {
+  const handleCompanyLogin = () => {
     setMenuOpen(false);
     router.push("/login");
   };
@@ -165,9 +166,14 @@ function WelcomeScreen() {
 
           <DropdownMenuContent className="w-48" align="end">
 
-            <DropdownMenuItem onClick={handleLogin}>
+            <DropdownMenuItem onClick={handleCompanyLogin}>
+              <UserCog className="w-4 h-4 mr-2" />
+              Admin Signin
+            </DropdownMenuItem>
+
+            <DropdownMenuItem onClick={handleCompanyLogin}>
               <Building2 className="w-4 h-4 mr-2" />
-              Admin Login
+              Company Signin
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={handleRegister}>
@@ -344,14 +350,14 @@ function WelcomeScreen() {
               Please login to have access
             </DialogTitle>
             <p className="text-slate-600 text-center">
-            All the service are locked,  they would be available once logged in
+              All the service are locked,  they would be available once logged in
             </p>
           </DialogHeader>
           <DialogDescription>
           </DialogDescription>
-           <div className="flex flex-col gap-4 mt-6">
+          <div className="flex flex-col gap-4 mt-6">
             <Button
-              onClick={handleLogin}
+              onClick={handleCompanyLogin}
               className="group  flex items-center justify-center gap-4 bg-gradient-to-r from-blue-600 to-purple-600
                hover:from-blue-700 hover:to-purple-700 text-white py-8 px-3 
                rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl  "
@@ -378,7 +384,7 @@ function WelcomeScreen() {
               <div className="text-center">
                 <div className="font-bold">Register company </div>
                 <div className="text-sm opacity-70">
-                  register your company service 
+                  register your company service
                 </div>
               </div>
             </Button>

@@ -2,27 +2,61 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../services/supabaseService";
-import { createRatingCriteria, insertServicePoint, createServicePoint_RatingCriteria } from '../services/companyService';
+import {
+  createRatingCriteria, insertServicePoint,
+  createServicePoint_RatingCriteria, getBranchByBarCode
+} from '../services/companyService';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [companyUser, setCompanyUser] = useState(null);
+  const [userAdmin, setUserAdmin] = useState(null);
+  const [userAdminType, setUserAdminType] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const session = supabase.auth.getSession();
-    setUser(session?.user ?? null);
-    setLoading(false);
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      setCompanyUser(session?.user ?? null);
+      setUserAdmin(session?.user ?? null);
+
+      if (session?.user) {
+        const role = await getUserRole(session.user.id);
+        setUserAdminType(role);
+      }
+
+      setLoading(false);
+    };
+
+    initSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setCompanyUser(session?.user ?? null);
+      setUserAdmin(session?.user ?? null);
+
+      if (session?.user) {
+        const role = await getUserRole(session.user.id);
+        setUserAdminType(role);
+      }
     });
 
     return () => {
       listener?.subscription.unsubscribe();
     };
   }, []);
+
+  const getUserRole = async (userId) => {
+    try {
+      const { data, error } = await supabase.from('CompanyManagers').select("role").eq('auth_id', userId);
+      if (error) return error;
+
+      return data || null;
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
 
   // Register a company (sign up)
   const registerCompany = async ({ data, ...companyData }) => {
@@ -52,38 +86,65 @@ export function AuthProvider({ children }) {
         const servicePoints = companyData.servicePoints || [{}]
         console.log(servicePoints)
 
-        servicePoints.forEach(async element => {
+        // servicePoints.forEach(async element => {
+        //   try {
+        //     const insertedServicePoint = await insertServicePoint(companyId, element)
+
+        //     const allRatingCriteria = companyData?.servicePoints?.flatMap(
+        //       (sp) => sp.ratingCriteria
+        //     );
+
+        //     if (!insertedServicePoint) return;
+
+        //     console.log(`awaited service point Id: ${insertedServicePoint?.id}`)
+
+        //     const ratingCriterions = await createRatingCriteria(allRatingCriteria);
+
+        //     if (ratingCriterions?.length <= 0) return;
+
+        //     ratingCriterions.forEach(async criterion => {
+        //       const servicePoint_ratingCriteria = {
+        //         service_point_id: insertedServicePoint?.id,
+        //         rating_criteria_id: criterion?.criteria_id,
+        //         is_required: criterion?.is_required
+        //       };
+
+        //       const servicePointRatingCriteriaHybrid = await createServicePoint_RatingCriteria(servicePoint_ratingCriteria);
+        //       console.log(`Hybrid Data:${servicePointRatingCriteriaHybrid}`)
+        //     });
+
+        //   } catch (error) {
+        //     console.error('Error in service points:', error);
+        //     throw error;
+        //   }
+        // });
+
+        for (const element of servicePoints) {
           try {
-            const insertedServicePoint = await insertServicePoint(companyId, element)
+            const insertedServicePoint = await insertServicePoint(companyId, element);
 
             const allRatingCriteria = companyData?.servicePoints?.flatMap(
               (sp) => sp.ratingCriteria
             );
 
-            if (!insertedServicePoint) return;
-
-            console.log(`awaited service point Id: ${insertedServicePoint?.id}`)
+            if (!insertedServicePoint) continue;
 
             const ratingCriterions = await createRatingCriteria(allRatingCriteria);
 
-            if (ratingCriterions?.length <= 0) return;
-
-            ratingCriterions.forEach(async criterion => {
+            for (const criterion of ratingCriterions) {
               const servicePoint_ratingCriteria = {
                 service_point_id: insertedServicePoint?.id,
                 rating_criteria_id: criterion?.criteria_id,
                 is_required: criterion?.is_required
               };
 
-              const servicePointRatingCriteriaHybrid = await createServicePoint_RatingCriteria(servicePoint_ratingCriteria);
-              console.log(`Hybrid Data:${servicePointRatingCriteriaHybrid}`)
-            });
+              await createServicePoint_RatingCriteria(servicePoint_ratingCriteria);
+            }
 
           } catch (error) {
-            console.error('Error in service points:', error);
-            throw error;
+            console.error(error);
           }
-        });
+        }
 
         return { error: false, msg: 'Registration successful!' };
       } else {
@@ -97,8 +158,27 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const registerManager = async ({ data, ...userData }) => {
+    try {
+      const { data: newManager, error } = await supabase.rpc("create_company_manager", {
+        p_auth_id: data.authUserId,
+        p_company_id: userData.companyId,
+        p_branch_id: userData.branch_id,
+        p_user_name: userData.name,
+        p_role: userData.role,
+        p_phone: userData.phone
+      });
+
+      if (error) return error;
+
+      return newManager;
+    } catch (err) {
+      return { error: true, msg: err.message || 'Something went wrong' };
+    }
+  };
+
   // Login with company credentials
-  const loginCompany = async ({ email, password }) => {
+  const loginCompany = async ({ email, password, branchCode }) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -111,6 +191,15 @@ export function AuthProvider({ children }) {
     const companyId = data?.user?.user_metadata?.company_id || data.user.id;
     localStorage.setItem("company_id", companyId);
 
+    if (branchCode) {
+      const branch = await getBranchByBarCode(
+        branchCode?.trim(),
+        companyId
+      );
+
+      if (branch) localStorage.setItem("branch_id", branch?.id);
+    }
+
     //deleting to force cache miss in welcome page
     localStorage.removeItem("cachedDepartments");
     localStorage.removeItem("company_logo_base64")
@@ -118,14 +207,29 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const loginAdminUser = async ({ email, password, }) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+
+    return data;
+  };
+
   // Logout
-  const logout = async () => {
+  const logoutCompany = async () => {
     await supabase.auth.signOut();
-    setUser(null);
+    setCompanyUser(null);
+  };
+
+  const logoutAdminUser = async () => {
+    await supabase.auth.signOut();
+    setUserAdmin(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, registerCompany, loginCompany, logout }}>
+    <AuthContext.Provider value={{ companyUser, userAdmin, loading, registerCompany, registerManager, loginCompany, loginAdminUser, logoutCompany, logoutAdminUser }}>
       {children}
     </AuthContext.Provider>
   );

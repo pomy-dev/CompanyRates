@@ -4,25 +4,9 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../../services/supabaseService";
 import { getAllUsersByCompanyBranchId } from "../../../services/ratingService";
 import {
-  Building2,
-  LogOut,
-  Star,
-  MessageSquare,
-  BarChart3,
-  CheckSquare,
-  Lightbulb,
-  Target,
-  MapPin,
-  Plus,
-  Search,
-  ChevronDown,
-  Menu,
-  X,
-  Users,
-  Shield,
-  KeyRound,
-  Trash2,
-  Boxes,
+  Building2, LogOut, Star, MessageSquare, BarChart3, CheckSquare, Lightbulb, Target,
+  MapPin, Plus, Search, ChevronDown, Menu, X, Users, DoorClosedLocked, Shield, KeyRound,
+  Trash2, Boxes,
 } from "lucide-react";
 import { useAuth } from "../../../app-context/auth-context";
 import {
@@ -34,10 +18,14 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { PiSpinner } from "react-icons/pi";
 import { Pie, Bar } from "react-chartjs-2";
 import BranchModal from "./BranchModal";
 import LoadingModal from "./loadingModal";
-import { getCompanyServicePointCriteria, insertNewBranch, fetchBranches, getRatingsByCriteriaIds, getRatings } from "../../../services/companyService";
+import {
+  getCompanyServicePointCriteria, insertNewBranch, fetchBranches,
+  getRatingsByCriteriaIds, getRatings
+} from "../../../services/companyService";
 
 ChartJS.register(
   ArcElement,
@@ -61,11 +49,11 @@ function Dashboard() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
-  const { user, loading: authLoading, logout } = useAuth();
+  const { companyUser, loading: logoutCompany, logoutAdminUser, registerManager } = useAuth();
   const [recentComments, setRecentComments] = useState([]);
-  const companyId = user?.user_metadata?.company_id || user?.id;
-  const isSuperAdmin = !!user && companyId === user?.id;
-  const userDisplayName = user?.user_metadata?.full_name || user?.email || "User";
+  const companyId = companyUser?.user_metadata?.company_id || companyUser?.id;
+  const isSuperAdmin = !!companyUser && companyId === companyUser?.id;
+  const userDisplayName = companyUser?.user_metadata?.full_name || companyUser?.email || "User";
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -75,7 +63,7 @@ function Dashboard() {
   const [filterServicePoint, setFilterServicePoint] = useState("all");
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const [isTabsMoreOpen, setIsTabsMoreOpen] = useState(false);
-  
+
   const selectedBranchName =
     branches?.find(
       (b) => String(b.branch_id) === String(selectedBranchId)
@@ -117,6 +105,7 @@ function Dashboard() {
 
   const [adminAccounts, setAdminAccounts] = useState([]);
   const [adminAccountsLoading, setAdminAccountsLoading] = useState(false);
+  const [adminAccountCreating, setAdminAccountCreating] = useState(false);
   const [adminAccountsError, setAdminAccountsError] = useState("");
 
   const [newAccount, setNewAccount] = useState({
@@ -124,6 +113,7 @@ function Dashboard() {
     password: "",
     name: "",
     role: "branch_admin",
+    phone: "",
     branch_id: "",
   });
 
@@ -133,6 +123,19 @@ function Dashboard() {
   const [myPassword, setMyPassword] = useState("");
   const [myPasswordLoading, setMyPasswordLoading] = useState(false);
   const [myPasswordSuccess, setMyPasswordSuccess] = useState("");
+
+  const [companyStructureLoading, setCompanyStructureLoading] = useState(false);
+  const [companyStructureError, setCompanyStructureError] = useState("");
+
+  const [adminUser, setAdminUser] = useState(null);
+  const [adminUserType, setAdminUserType] = useState(null);
+
+  // Add these states
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(true);
+  const [adminLoginEmail, setAdminLoginEmail] = useState("");
+  const [adminLoginPassword, setAdminLoginPassword] = useState("");
+  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState("");
 
   const fetchAdminAccounts = async () => {
     setAdminAccountsLoading(true);
@@ -145,17 +148,17 @@ function Dashboard() {
         return;
       }
 
-      const res = await fetch("/api/admin/accounts", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // const res = await fetch("/api/admin/accounts", {
+      //   method: "GET",
+      //   headers: {
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      // });
 
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || "Failed to load accounts.");
+      // const body = await res.json().catch(() => ({}));
+      // if (!res.ok) throw new Error(body?.error || "Failed to load accounts.");
 
-      setAdminAccounts(Array.isArray(body?.data) ? body.data : []);
+      // setAdminAccounts(Array.isArray(body?.data) ? body.data : []);
     } catch (e) {
       setAdminAccountsError(e.message || "Failed to load accounts.");
     } finally {
@@ -164,36 +167,38 @@ function Dashboard() {
   };
 
   const createAdminAccount = async () => {
-    setAdminAccountsError("");
     try {
+      setAdminAccountsError("");
+      setAdminAccountCreating(true)
       const { data: sessionRes } = await supabase.auth.getSession();
       const token = sessionRes?.session?.access_token;
       if (!token) throw new Error("Missing session token. Please re-login.");
 
       const payload = {
-        email: newAccount.email,
-        password: newAccount.password,
         name: newAccount.name,
         role: newAccount.role,
+        phone: newAccount.phone,
+        company_id: companyUser?.id,
         branch_id: newAccount.branch_id ? Number(newAccount.branch_id) : null,
       };
 
-      const res = await fetch("/api/admin/accounts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
+      const { data: userData, error } = await supabase.auth.admin.createUser({
+        email: newAccount.email,
+        password: newAccount.password,
+        email_confirm: true
       });
 
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || "Failed to create account.");
+      if (error) throw new Error(error);
 
-      setNewAccount({ email: "", password: "", name: "", role: "branch_admin", branch_id: "" });
+      const body = await registerManager(userData, payload);
+      if (!body) throw new Error(body?.error || "Failed to create account.");
+
+      setNewAccount({ email: "", password: "", name: "", role: "branch_admin", phone: "", branch_id: "" });
       await fetchAdminAccounts();
     } catch (e) {
       setAdminAccountsError(e.message || "Failed to create account.");
+    } finally {
+      setAdminAccountCreating(false)
     }
   };
 
@@ -246,9 +251,6 @@ function Dashboard() {
       setAdminAccountsError(e.message || "Failed to delete account.");
     }
   };
-
-  const [companyStructureLoading, setCompanyStructureLoading] = useState(false);
-  const [companyStructureError, setCompanyStructureError] = useState("");
 
   const destroyCurrentBranchStructure = async () => {
     setCompanyStructureError("");
@@ -335,13 +337,13 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!companyUser) return;
     const storedBranchId = localStorage.getItem("branch_id") || "";
     if (!selectedBranchId) {
       setSelectedBranchId(storedBranchId);
     }
     const branchId = selectedBranchId || storedBranchId;
-    const companyId = user?.user_metadata?.company_id || user?.id;
+    const companyId = companyUser?.user_metadata?.company_id || companyUser?.id;
 
     try {
       setIsLoading(true);
@@ -712,7 +714,22 @@ function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, selectedBranchId, allBranchesMonth]);
+  }, [companyUser, selectedBranchId, allBranchesMonth]);
+
+  useEffect(() => {
+    if (!companyUser) return;
+
+    const shouldShowAdminModal = adminUser === null && adminUserType === null;
+
+    setShowAdminLoginModal(shouldShowAdminModal);
+
+    // Optional: Reset form when modal becomes visible
+    if (shouldShowAdminModal) {
+      setAdminLoginEmail("");
+      setAdminLoginPassword("");
+      setAdminLoginError("");
+    }
+  }, [companyUser, adminUser, adminUserType]);
 
   const activeServicePoints = companyData?.CompanyServicePoints?.filter((sp) => sp.isActive).length || 0;
 
@@ -1074,11 +1091,67 @@ function Dashboard() {
     }
   };
 
+  const handleAdminLogin = async () => {
+    if (!adminLoginEmail.trim() || !adminLoginPassword.trim()) {
+      setAdminLoginError("Please enter both email and password");
+      return;
+    }
+
+    setAdminLoginLoading(true);
+    setAdminLoginError("");
+
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const token = sessionRes?.session?.access_token;
+
+      if (!token) {
+        throw new Error("Session expired. Please login again.");
+      }
+
+      const res = await fetch("/api/admin/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email: adminLoginEmail.trim(),
+          password: adminLoginPassword,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || "Invalid admin credentials");
+      }
+
+      // SUCCESS - Set admin user and close modal
+      setAdminUser(result.user || { email: adminLoginEmail });
+      setAdminUserType(result.role || "admin");
+
+      // Modal will automatically close via useEffect
+      setAdminLoginError("");
+
+    } catch (error) {
+      setAdminLoginError(error.message || "Admin verification failed. Please try again.");
+    } finally {
+      setAdminLoginLoading(false);
+    }
+  };
+
+  // When you want to reset (e.g., in useEffect or on cancel)
+  const resetAdminLoginForm = () => {
+    setAdminLoginEmail("");
+    setAdminLoginPassword("");
+    setAdminLoginError("");
+  };
+
   const handleLogout = async () => {
     setIsLoading(true);
     setAction("Logging out...");
     try {
-      await logout();
+      await logoutCompany();
       setCompanyData(null);
       setRatings([]);
       setComments([]);
@@ -1295,6 +1368,98 @@ function Dashboard() {
         )}
       </div>
 
+      {/* Admin Login Modal - Only closes after successful login */}
+      {/* {showAdminLoginModal && ( */}
+      {/* <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"> */}
+      {/* Blurry Backdrop */}
+      {/* <div className="absolute inset-0 bg-black/70 backdrop-blur-lg" /> */}
+
+      {/* Modal Content */}
+      {/* <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"> */}
+      {/* <div className="p-8">
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="bg-blue-100 p-4 rounded-2xl mb-4">
+              <DoorClosedLocked className="h-12 w-12 text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Admin Verification</h2>
+            <p className="text-gray-600 mt-2 text-sm">
+              Please verify your admin credentials to access the dashboard
+            </p>
+          </div>
+
+          {adminLoginError && (
+            <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-xl text-sm">
+              {adminLoginError}
+            </div>
+          )}
+
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={adminLoginEmail}
+                onChange={(e) => {
+                  setAdminLoginEmail(e.target.value);
+                  if (adminLoginError) setAdminLoginError("");
+                }}
+                placeholder="admin@yourcompany.com"
+                className="w-full px-4 py-3.5 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                disabled={adminLoginLoading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                value={adminLoginPassword}
+                onChange={(e) => {
+                  setAdminLoginPassword(e.target.value);
+                  if (adminLoginError) setAdminLoginError("");
+                }}
+                placeholder="Enter your password"
+                className="w-full px-4 py-3.5 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                disabled={adminLoginLoading}
+              />
+            </div>
+
+            <button
+              onClick={handleAdminLogin}
+              disabled={adminLoginLoading || !adminLoginEmail.trim() || !adminLoginPassword.trim()}
+              className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all flex items-center justify-center gap-3
+                    ${adminLoginLoading || !adminLoginEmail.trim() || !adminLoginPassword.trim()
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 active:scale-[0.985]"
+                } text-white`}
+            >
+              {adminLoginLoading ? (
+                <>
+                  <div className="w-6 h-6 border-4 border-white border-t-transparent animate-spin rounded-full" />
+                  Verifying Admin Access...
+                </>
+              ) : (
+                "Verify & Continue"
+              )}
+            </button>
+          </div>
+        </div> */}
+
+      {/* Footer note */}
+      {/* <div className="bg-gray-50 border-t border-gray-100 px-8 py-5 text-center">
+          <p className="text-xs text-gray-500">
+            This dashboard is restricted to authorized administrators only.
+          </p>
+        </div> */}
+      {/* </div> */}
+      {/* </div> */}
+      {/* )} */}
+
+      {/* Main return content dashboard */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -1770,7 +1935,7 @@ function Dashboard() {
                           }
                           setMyPasswordLoading(true);
                           try {
-                            const ok = await updateAdminAccount(user?.id, {
+                            const ok = await updateAdminAccount(companyUser?.id, {
                               password: myPassword,
                             });
                             if (ok) {
@@ -1809,6 +1974,16 @@ function Dashboard() {
                           />
                         </div>
                         <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                          <input
+                            type="tel"
+                            value={newAccount.phone}
+                            onChange={(e) => setNewAccount((p) => ({ ...p, phone: e.target.value }))}
+                            className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            placeholder="+268 76xx xxxx"
+                          />
+                        </div>
+                        <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Temporary password</label>
                           <input
                             type="password"
@@ -1837,7 +2012,7 @@ function Dashboard() {
                               className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             >
                               <option value="branch_admin">Branch admin</option>
-                              <option value="viewer">Viewer</option>
+                              <option value="member">Member</option>
                             </select>
                           </div>
                           <div>
@@ -1847,7 +2022,7 @@ function Dashboard() {
                               onChange={(e) => setNewAccount((p) => ({ ...p, branch_id: e.target.value }))}
                               className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             >
-                              <option value="">All / none</option>
+                              <option value={companyId}>Main Branch</option>
                               {(branches || []).map((b, idx) => (
                                 <option key={idx} value={b.branch_id}>
                                   {b.branch_name}
@@ -1862,7 +2037,10 @@ function Dashboard() {
                           onClick={createAdminAccount}
                           className="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
                         >
-                          <Users className="h-4 w-4 mr-2" />
+                          {
+                            adminAccountCreating ? <PiSpinner className="animate-spin h-5 w-5" /> :
+                              <Users className="h-4 w-4 mr-2" />
+                          }
                           Create staff account
                         </button>
                       </div>
@@ -2684,6 +2862,7 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* branch modal for adding or updating branch */}
       <BranchModal
         isOpen={showBranchModal}
         onClose={() => {
@@ -2694,6 +2873,7 @@ function Dashboard() {
         servicePoints={companyData?.CompanyServicePoints}
       />
 
+      {/* login modal for company and branch */}
       <LoadingModal
         isOpen={isLoading}
         onClose={() => setIsLoading(false)}
