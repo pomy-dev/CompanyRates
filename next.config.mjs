@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Remove `output: 'export'` for server-side routes (API, Supabase admin) to work.
   eslint: {
     ignoreDuringBuilds: true,
   },

@@ -148,17 +148,17 @@ function Dashboard() {
         return;
       }
 
-      // const res = await fetch("/api/admin/accounts", {
-      //   method: "GET",
-      //   headers: {
-      //     Authorization: `Bearer ${token}`,
-      //   },
-      // });
+      const res = await fetch("/api/admin/accounts", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      // const body = await res.json().catch(() => ({}));
-      // if (!res.ok) throw new Error(body?.error || "Failed to load accounts.");
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Failed to load accounts.");
 
-      // setAdminAccounts(Array.isArray(body?.data) ? body.data : []);
+      setAdminAccounts(Array.isArray(body?.data) ? body.data : []);
     } catch (e) {
       setAdminAccountsError(e.message || "Failed to load accounts.");
     } finally {
@@ -175,23 +175,25 @@ function Dashboard() {
       if (!token) throw new Error("Missing session token. Please re-login.");
 
       const payload = {
+        email: newAccount.email,
+        password: newAccount.password,
         name: newAccount.name,
         role: newAccount.role,
         phone: newAccount.phone,
-        company_id: companyUser?.id,
         branch_id: newAccount.branch_id ? Number(newAccount.branch_id) : null,
       };
 
-      const { data: userData, error } = await supabase.auth.admin.createUser({
-        email: newAccount.email,
-        password: newAccount.password,
-        email_confirm: true
+      const res = await fetch("/api/admin/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       });
 
-      if (error) throw new Error(error);
-
-      const body = await registerManager(userData, payload);
-      if (!body) throw new Error(body?.error || "Failed to create account.");
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error || "Failed to create account.");
 
       setNewAccount({ email: "", password: "", name: "", role: "branch_admin", phone: "", branch_id: "" });
       await fetchAdminAccounts();
@@ -940,14 +942,6 @@ function Dashboard() {
     }
     return keys;
   };
-
-  // if (authLoading) {
-  //   return (
-  //     <div className="h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-  //       <div className="text-gray-600">Loading...</div>
-  //     </div>
-  //   );
-  // }
 
   const totalUsers = users?.length || 0;
 

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getSupabaseAdminClient } from "../../../../../lib/server/supabaseAdmin";
+import { getSupabaseAdminClient } from "../../../../lib/server/supabaseAdmin";
+
+export const dynamic = "force-dynamic";
 
 async function getRequestUser(request) {
   const authHeader = request.headers.get("authorization") || "";
@@ -51,6 +53,7 @@ export async function GET(request) {
   try {
     const admin = getSupabaseAdminClient();
     const guard = await ensureSuperAdmin(request, admin);
+
     if (guard.error) {
       return NextResponse.json({ error: guard.error }, { status: guard.status });
     }
@@ -103,6 +106,7 @@ export async function POST(request) {
   try {
     const admin = getSupabaseAdminClient();
     const guard = await ensureSuperAdmin(request, admin);
+
     if (guard.error) {
       return NextResponse.json({ error: guard.error }, { status: guard.status });
     }
@@ -110,6 +114,7 @@ export async function POST(request) {
     const payload = await request.json();
     const email = payload?.email?.trim();
     const password = payload?.password;
+    const phone = payload?.phone ? String(payload.phone).trim() : null;
     const fullName = payload?.name?.trim() || "";
     const role = formatRole(payload?.role);
     const branchId = payload?.branch_id ? Number(payload.branch_id) : null;
@@ -125,6 +130,7 @@ export async function POST(request) {
       user_metadata: {
         company_id: guard.company.id,
         account_type: "staff",
+        phone,
         role,
         branch_id: branchId,
         full_name: fullName,
@@ -137,21 +143,22 @@ export async function POST(request) {
 
     // Optional mirror row in existing users table for easier reporting.
     const mirrorPayload = {
-      name: fullName || email,
-      email,
-      phone: null,
-      user_path: role,
+      auth_id: created.user.id,
+      user_name: fullName || email,
+      phone: phone,
+      role: role,
       company_id: guard.company.id,
       branch_id: branchId,
     };
 
-    await admin.from("users").insert(mirrorPayload);
+    await admin.from("CompanyManagers").insert(mirrorPayload);
 
     return NextResponse.json({
       data: {
         id: created.user.id,
         email: created.user.email,
         name: fullName,
+        phone,
         role,
         branch_id: branchId,
       },
