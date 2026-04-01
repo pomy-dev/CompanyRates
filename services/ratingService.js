@@ -44,6 +44,7 @@ export const getAllUsersByCompanyBranchId = async (companyId, branchId) => {
 export const insertFeedback = async (feedbackData) => {
   const { user_id, comments, suggestions, ratingId, company_id, branch_id } = feedbackData;
 
+  console.log("Inserting Feedback with Data:", feedbackData);
   const { data, error } = await supabase
     .from('feedback')
     .insert([

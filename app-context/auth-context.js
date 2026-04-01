@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
 
   const getUserRole = async (userId) => {
     try {
-      const { data, error } = await supabase.from('CompanyManagers').select("*").eq('auth_id', userId);
+      const { data, error } = await supabase.from('CompanyManagers').select("*").eq('auth_id', userId).single();
       if (error) return error;
 
       return data || null;
@@ -199,6 +199,7 @@ export function AuthProvider({ children }) {
 
     const adminData = await getUserRole(data.user.id);
 
+    console.log("Admin Data:", adminData);
     if (adminData.branch_id) localStorage.setItem("branch_id", adminData.branch_id);
 
     return data;

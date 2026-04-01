@@ -84,6 +84,7 @@ function LoginForm({ initialType }) {
     setLoading(true);
     setError("");
     let data;
+    let path;
 
     // Validate branch code if isBranch is true
     if (isBranch && !formData.branchCode?.trim()) {
@@ -94,6 +95,7 @@ function LoginForm({ initialType }) {
 
     try {
       if (type === "admin") {
+        path = "/"
         data = await loginAdminUser({
           email: formData.email,
           password: formData.password,
@@ -112,7 +114,6 @@ function LoginForm({ initialType }) {
       if (!data) return;
 
       alert("Login Successful!");
-      console.log('User Admin Data & Type after login: ', data);
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);

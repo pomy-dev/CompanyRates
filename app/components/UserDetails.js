@@ -142,7 +142,10 @@ function UserDetailsScreen() {
   };
 
   const sendFeedBack = async (userId, branchIdFromUser) => {
-    if (!companyId) return;
+    if (!companyId) {
+      notification.error("Company information not loaded yet. Please wait.");
+      return
+    };
 
     const newFeedback = {
       user_id: userId,

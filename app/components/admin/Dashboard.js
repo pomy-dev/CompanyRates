@@ -344,6 +344,7 @@ function Dashboard() {
     }
     const branchId = selectedBranchId || storedBranchId;
     const companyId = companyUser?.user_metadata?.company_id || companyUser?.id;
+    console.log("Loading dashboard for companyId:", companyId, "branchId:", branchId);
 
     try {
       setIsLoading(true);
@@ -400,7 +401,7 @@ function Dashboard() {
           };
 
           setCompanyData(companyWithRatings);
-          console.log("Service Points:", companyWithRatings);
+          // console.log("Service Points:", companyWithRatings);
 
         } catch (err) {
           setError(err.message);
@@ -1230,7 +1231,7 @@ function Dashboard() {
                         <option value="">Select Branch</option>
                         {branches.map((branch, index) => (
                           <option key={index} value={branch.branch_id}>
-                            {branch.branch_name}-branch
+                            {branch.branch_name}
                           </option>
                         ))}
                       </select>
@@ -1320,7 +1321,7 @@ function Dashboard() {
                             <option value="">Select Branch</option>
                             {branches.map((branch, index) => (
                               <option key={index} value={branch.branch_id}>
-                                {branch.branch_name}-branch
+                                {branch.branch_name}
                               </option>
                             ))}
                           </select>
