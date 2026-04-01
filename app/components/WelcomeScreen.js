@@ -104,9 +104,11 @@ function WelcomeScreen() {
     };
   }, [menuOpen]);
 
-  const handleCompanyLogin = () => {
+  const handleCompanyLogin = (userType) => {
     setMenuOpen(false);
-    router.push("/login");
+    // carry the user type to the login page so that it can decide which login form to show
+    router.push(`/login?type=${userType}`);
+    // router.push("/login");
   };
 
   const handleRegister = () => {
@@ -166,20 +168,20 @@ function WelcomeScreen() {
 
           <DropdownMenuContent className="w-48" align="end">
 
-            <DropdownMenuItem onClick={handleCompanyLogin}>
+            <DropdownMenuItem onClick={() => handleCompanyLogin("admin")}>
               <UserCog className="w-4 h-4 mr-2" />
               Admin Signin
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={handleCompanyLogin}>
+            <DropdownMenuItem onClick={() => handleCompanyLogin("company")}>
               <Building2 className="w-4 h-4 mr-2" />
               Company Signin
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={handleRegister}>
+            {/* <DropdownMenuItem onClick={handleRegister}>
               <Users className="w-4 h-4 mr-2" />
               Register Company
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
 
           </DropdownMenuContent>
         </DropdownMenu>
@@ -343,7 +345,7 @@ function WelcomeScreen() {
 
       {/* Dialog Bottom Sheet to teel the user to login or admin to log in */}
       {/* <Dialog open={loggedIn} onOpenChange={setLoggedIn}> */}
-      <Dialog open={loggedIn}>
+      {/* <Dialog open={loggedIn}>
         <DialogContent className="max-w-md mx-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center mb-2">
@@ -390,7 +392,7 @@ function WelcomeScreen() {
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
   );
 }

@@ -91,6 +91,7 @@ export async function GET(request) {
         email: u.email,
         name: u.user_metadata?.full_name || "",
         role: u.id === companyId ? "super_admin" : (u.user_metadata?.role || "branch_admin"),
+        phone: u.user_metadata?.phone || "",
         branch_id: u.user_metadata?.branch_id || null,
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at,
@@ -306,4 +307,3 @@ export async function DELETE(request) {
     return NextResponse.json({ error: error.message || "Server error" }, { status: 500 });
   }
 }
-

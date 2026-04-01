@@ -49,7 +49,7 @@ function Dashboard() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
-  const { companyUser, loading: logoutCompany, logoutAdminUser, registerManager } = useAuth();
+  const { companyUser, loading: logoutCompany, logoutAdminUser } = useAuth();
   const [recentComments, setRecentComments] = useState([]);
   const companyId = companyUser?.user_metadata?.company_id || companyUser?.id;
   const isSuperAdmin = !!companyUser && companyId === companyUser?.id;
@@ -65,9 +65,7 @@ function Dashboard() {
   const [isTabsMoreOpen, setIsTabsMoreOpen] = useState(false);
 
   const selectedBranchName =
-    branches?.find(
-      (b) => String(b.branch_id) === String(selectedBranchId)
-    )?.branch_name || "";
+    branches?.find((b) => String(b.branch_id) === String(selectedBranchId) || String(companyUser?.user_metadata?.branch_id))?.branch_name || "";
 
   const [distribution, setDistribution] = useState({
     1: 0,
@@ -1145,20 +1143,25 @@ function Dashboard() {
     setIsLoading(true);
     setAction("Logging out...");
     try {
-      await logoutCompany();
-      setCompanyData(null);
-      setRatings([]);
-      setComments([]);
-      setOtherData([]);
-      setTotalRatings(0);
-      setAverageRating(0);
-      setUsers([]);
-      setBranches([]);
-      setSelectedBranchId("");
-      setDistribution({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
-      setError(null);
-      setRecentComments([]);
-      setSuggestions([]);
+      if (isSuperAdmin) {
+        await logoutCompany();
+
+        setCompanyData(null);
+        setRatings([]);
+        setComments([]);
+        setOtherData([]);
+        setTotalRatings(0);
+        setAverageRating(0);
+        setUsers([]);
+        setBranches([]);
+        setSelectedBranchId("");
+        setDistribution({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+        setError(null);
+        setRecentComments([]);
+        setSuggestions([]);
+      } else {
+        await logoutAdminUser();
+      }
       setActiveTab("overview");
     }
     catch (error) {
@@ -1532,6 +1535,7 @@ function Dashboard() {
             {/* Desktop tabs */}
             <nav className="hidden lg:flex space-x-8 px-6" aria-label="Tabs">
               {tabs.map((tab) => {
+                if (tab.id === "branches" && !isSuperAdmin) return null; // Only show Branches tab to super admins
                 const Icon = tab.icon;
                 return (
                   <button
@@ -1853,6 +1857,7 @@ function Dashboard() {
               </div>
             )}
 
+
             {/* Access Tab */}
             {activeTab === "access" && (
               <div className="space-y-6">
@@ -2029,6 +2034,7 @@ function Dashboard() {
                         <button
                           type="button"
                           onClick={createAdminAccount}
+                          disabled={adminAccountCreating}
                           className="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
                         >
                           {
@@ -2047,12 +2053,13 @@ function Dashboard() {
                           <div className="text-xs text-gray-500">Loading…</div>
                         )}
                       </div>
-                      <table className="min-w-[860px] w-full text-sm">
+                      <table className="min-w-[960px] w-full text-sm">
                         <thead>
                           <tr className="text-left text-gray-600">
                             <th className="py-2 pr-4">Email</th>
                             <th className="py-2 pr-4">Name</th>
                             <th className="py-2 pr-4">Role</th>
+                            <th className="py-2 pr-4">Phone</th>
                             <th className="py-2 pr-4">Branch</th>
                             <th className="py-2 pr-4">Actions</th>
                           </tr>
@@ -2063,6 +2070,7 @@ function Dashboard() {
                               <td className="py-2 pr-4 text-gray-900">{a.email}</td>
                               <td className="py-2 pr-4 text-gray-700">{a.name || "—"}</td>
                               <td className="py-2 pr-4 text-gray-700">{a.role}</td>
+                              <td className="py-2 pr-4 text-gray-700">{a.phone || "—"}</td>
                               <td className="py-2 pr-4 text-gray-700">
                                 {a.branch_id ? (branches || []).find((b) => b.branch_id === a.branch_id)?.branch_name || a.branch_id : "—"}
                               </td>
@@ -2311,8 +2319,9 @@ function Dashboard() {
               </div>
             )}
 
+
             {/* Branches Tab */}
-            {activeTab === "branches" && (
+            {(activeTab === "branches" && isSuperAdmin) && (
               <div className="space-y-8">
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                   <div>

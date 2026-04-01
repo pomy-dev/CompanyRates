@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Building2, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -9,8 +10,9 @@ import { getBranchByBarCode } from '../../../services/companyService'
 import { useRouter } from "next/navigation";
 import { PiSpinner } from "react-icons/pi";
 
-function LoginForm() {
-  const { loginCompany } = useAuth();
+function LoginForm({ initialType }) {
+  const { loginCompany, loginAdminUser } = useAuth();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     branchCode: "",
     email: "",
@@ -21,7 +23,8 @@ function LoginForm() {
   const [isEyeOn, setEyeOn] = useState(false);
   const [isBranch, setIsBranch] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const type = initialType || searchParams.get("type");
 
   function extractStoragePath(fullUrl) {
     const parts = fullUrl.split("/object/public/company-logos/");
@@ -80,6 +83,7 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    let data;
 
     // Validate branch code if isBranch is true
     if (isBranch && !formData.branchCode?.trim()) {
@@ -89,16 +93,26 @@ function LoginForm() {
     }
 
     try {
-      const data = await loginCompany({
-        email: formData.email,
-        password: formData.password,
-      });
+      if (type === "admin") {
+        data = await loginAdminUser({
+          email: formData.email,
+          password: formData.password,
+        });
+        
+      } else {
+        data = await loginCompany({
+          email: formData.email,
+          password: formData.password,
+          branchCode: isBranch ? formData.branchCode : null,
+        });
+
+        await fetchLogoPathAndCache();
+      }
 
       if (!data) return;
 
       alert("Login Successful!");
-      await fetchLogoPathAndCache();
-
+      console.log('User Admin Data & Type after login: ', data);
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -212,33 +226,36 @@ function LoginForm() {
             </div>
           </div>
 
-          <div>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                name="isBranch"
-                checked={isBranch}
-                onChange={handleToggleChange}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-700">Sign in as Branch</span>
-            </label>
-
-            {isBranch && (
-              <div className="relative mt-4 animate-slideIn">
-                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          {type === "company" && (
+            <div>
+              <label className="flex items-center">
                 <input
-                  type="text"
-                  name="branchCode"
-                  value={formData.branchCode}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter branch code"
-                  required
+                  type="checkbox"
+                  name="isBranch"
+                  checked={isBranch}
+                  onChange={handleToggleChange}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-              </div>
-            )}
-          </div>
+                <span className="ml-2 text-sm font-medium text-gray-700">Sign in as Branch</span>
+              </label>
+
+              {isBranch && (
+                <div className="relative mt-4 animate-slideIn">
+                  <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    name="branchCode"
+                    value={formData.branchCode}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Enter branch code"
+                    required
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
 
           <button
             type="submit"
@@ -251,17 +268,19 @@ function LoginForm() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm">
-            Don&apos;t have an account?{" "}
-            <button
-              onClick={handleRegister}
-              className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
-            >
-              Register your company
-            </button>
-          </p>
-        </div>
+        {type === "company" && (
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 text-sm">
+              Don&apos;t have an account?{" "}
+              <button
+                onClick={handleRegister}
+                className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
+                Register your company
+              </button>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

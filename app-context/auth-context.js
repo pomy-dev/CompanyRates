@@ -12,7 +12,6 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [companyUser, setCompanyUser] = useState(null);
   const [userAdmin, setUserAdmin] = useState(null);
-  const [userAdminType, setUserAdminType] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,13 +19,6 @@ export function AuthProvider({ children }) {
       const { data: { session } } = await supabase.auth.getSession();
 
       setCompanyUser(session?.user ?? null);
-      setUserAdmin(session?.user ?? null);
-
-      if (session?.user) {
-        const role = await getUserRole(session.user.id);
-        setUserAdminType(role);
-      }
-
       setLoading(false);
     };
 
@@ -34,12 +26,6 @@ export function AuthProvider({ children }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setCompanyUser(session?.user ?? null);
-      setUserAdmin(session?.user ?? null);
-
-      if (session?.user) {
-        const role = await getUserRole(session.user.id);
-        setUserAdminType(role);
-      }
     });
 
     return () => {
@@ -49,7 +35,7 @@ export function AuthProvider({ children }) {
 
   const getUserRole = async (userId) => {
     try {
-      const { data, error } = await supabase.from('CompanyManagers').select("role").eq('auth_id', userId);
+      const { data, error } = await supabase.from('CompanyManagers').select("*").eq('auth_id', userId);
       if (error) return error;
 
       return data || null;
@@ -185,9 +171,6 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
 
-    // set company id to localStorage
-    // - for super admin (company owner), company_id == user.id
-    // - for staff accounts, company_id should come from user metadata
     const companyId = data?.user?.user_metadata?.company_id || data.user.id;
     localStorage.setItem("company_id", companyId);
 
@@ -202,7 +185,7 @@ export function AuthProvider({ children }) {
 
     //deleting to force cache miss in welcome page
     localStorage.removeItem("cachedDepartments");
-    localStorage.removeItem("company_logo_base64")
+    localStorage.removeItem("company_logo_base64");
 
     return data;
   };
@@ -213,6 +196,10 @@ export function AuthProvider({ children }) {
       password,
     });
     if (error) throw error;
+
+    const adminData = await getUserRole(data.user.id);
+
+    if (adminData.branch_id) localStorage.setItem("branch_id", adminData.branch_id);
 
     return data;
   };
@@ -229,7 +216,10 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ companyUser, userAdmin, loading, registerCompany, registerManager, loginCompany, loginAdminUser, logoutCompany, logoutAdminUser }}>
+    <AuthContext.Provider value={{
+      companyUser, userAdmin, getUserRole, loading, registerCompany,
+      registerManager, loginCompany, loginAdminUser, logoutCompany, logoutAdminUser
+    }}>
       {children}
     </AuthContext.Provider>
   );
