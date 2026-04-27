@@ -199,8 +199,8 @@ export function AuthProvider({ children }) {
 
     const adminData = await getUserRole(data.user.id);
 
-    console.log("Admin Data:", adminData);
-    if (adminData.branch_id) localStorage.setItem("branch_id", adminData.branch_id);
+    // console.log("Admin Data:", adminData);
+    if (adminData.branch_id) localStorage.setItem("branch_id", adminData?.branch_id);
 
     return data;
   };

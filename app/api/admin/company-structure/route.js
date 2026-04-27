@@ -93,6 +93,14 @@ export async function DELETE(request) {
       if (otherErr) throw otherErr;
     }
     {
+      const { error: managersErr } = await adminClient
+        .from("CompanyManagers")
+        .delete()
+        .eq("company_id", companyId)
+        .eq("branch_id", branchId);
+      if (managersErr) throw managersErr;
+    }
+    {
       const { error: usersErr } = await adminClient
         .from("users")
         .delete()

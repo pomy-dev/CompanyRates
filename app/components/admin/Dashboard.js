@@ -64,8 +64,15 @@ function Dashboard() {
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const [isTabsMoreOpen, setIsTabsMoreOpen] = useState(false);
 
-  const selectedBranchName =
-    branches?.find((b) => String(b.branch_id) === String(selectedBranchId) || String(companyUser?.user_metadata?.branch_id))?.branch_name || "";
+  let selectedBranchName;
+  branches?.find(branch => {
+    if (String(branch?.branch_id) === String(selectedBranchId))
+      selectedBranchName = branch?.branch_name;
+    else if (String(branch?.branch_id) === String(companyUser?.user_metadata?.branch_id))
+      selectedBranchName = branch?.branch_name;
+  })
+
+  // console.log(branches?.find((b) => String(b.branch_id) === String(selectedBranchId) || String(companyUser?.user_metadata?.branch_id))?.branch_name);
 
   const [distribution, setDistribution] = useState({
     1: 0,
@@ -124,16 +131,6 @@ function Dashboard() {
 
   const [companyStructureLoading, setCompanyStructureLoading] = useState(false);
   const [companyStructureError, setCompanyStructureError] = useState("");
-
-  const [adminUser, setAdminUser] = useState(null);
-  const [adminUserType, setAdminUserType] = useState(null);
-
-  // Add these states
-  const [showAdminLoginModal, setShowAdminLoginModal] = useState(true);
-  const [adminLoginEmail, setAdminLoginEmail] = useState("");
-  const [adminLoginPassword, setAdminLoginPassword] = useState("");
-  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
-  const [adminLoginError, setAdminLoginError] = useState("");
 
   const fetchAdminAccounts = async () => {
     setAdminAccountsLoading(true);
@@ -288,6 +285,7 @@ function Dashboard() {
       localStorage.removeItem("cachedServicePoints");
       localStorage.removeItem("cachedBranches");
 
+      setSelectedBranchId("");
       window.location.reload();
     } catch (e) {
       setCompanyStructureError(e.message || "Failed to destroy branch structure.");
@@ -717,21 +715,6 @@ function Dashboard() {
     }
   }, [companyUser, selectedBranchId, allBranchesMonth]);
 
-  useEffect(() => {
-    if (!companyUser) return;
-
-    const shouldShowAdminModal = adminUser === null && adminUserType === null;
-
-    setShowAdminLoginModal(shouldShowAdminModal);
-
-    // Optional: Reset form when modal becomes visible
-    if (shouldShowAdminModal) {
-      setAdminLoginEmail("");
-      setAdminLoginPassword("");
-      setAdminLoginError("");
-    }
-  }, [companyUser, adminUser, adminUserType]);
-
   const activeServicePoints = companyData?.CompanyServicePoints?.filter((sp) => sp.isActive).length || 0;
 
   const totalComments = Array.isArray(comments)
@@ -1082,62 +1065,6 @@ function Dashboard() {
       setIsLoading(false)
       setShowBranchModal(false);
     }
-  };
-
-  const handleAdminLogin = async () => {
-    if (!adminLoginEmail.trim() || !adminLoginPassword.trim()) {
-      setAdminLoginError("Please enter both email and password");
-      return;
-    }
-
-    setAdminLoginLoading(true);
-    setAdminLoginError("");
-
-    try {
-      const { data: sessionRes } = await supabase.auth.getSession();
-      const token = sessionRes?.session?.access_token;
-
-      if (!token) {
-        throw new Error("Session expired. Please login again.");
-      }
-
-      const res = await fetch("/api/admin/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          email: adminLoginEmail.trim(),
-          password: adminLoginPassword,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.error || "Invalid admin credentials");
-      }
-
-      // SUCCESS - Set admin user and close modal
-      setAdminUser(result.user || { email: adminLoginEmail });
-      setAdminUserType(result.role || "admin");
-
-      // Modal will automatically close via useEffect
-      setAdminLoginError("");
-
-    } catch (error) {
-      setAdminLoginError(error.message || "Admin verification failed. Please try again.");
-    } finally {
-      setAdminLoginLoading(false);
-    }
-  };
-
-  // When you want to reset (e.g., in useEffect or on cancel)
-  const resetAdminLoginForm = () => {
-    setAdminLoginEmail("");
-    setAdminLoginPassword("");
-    setAdminLoginError("");
   };
 
   const handleLogout = async () => {
