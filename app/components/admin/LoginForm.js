@@ -95,13 +95,14 @@ function LoginForm({ initialType }) {
 
     try {
       if (type === "admin") {
-        path = "/"
+        path = "/dashboard"
         data = await loginAdminUser({
           email: formData.email,
           password: formData.password,
         });
-        
+
       } else {
+        path = "/"
         data = await loginCompany({
           email: formData.email,
           password: formData.password,
@@ -114,7 +115,7 @@ function LoginForm({ initialType }) {
       if (!data) return;
 
       alert("Login Successful!");
-      router.push("/dashboard");
+      router.push(path);
     } catch (error) {
       setLoading(false);
       setError(error.message);
@@ -170,7 +171,7 @@ function LoginForm({ initialType }) {
               </div>
             )}
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Company Login</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{type === "company" ? "Company Login" : "Admin Login"}</h1>
           <p className="text-gray-500 mt-2 text-sm">Access your company dashboard securely</p>
         </div>
 

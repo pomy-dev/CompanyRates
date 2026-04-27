@@ -1176,7 +1176,7 @@ function Dashboard() {
       localStorage.removeItem("cachedDepartments");
       localStorage.removeItem("cachedBranches");
       // go to login page
-      window.location.href = "/login";
+      window.location.href = "/";
       setIsLoading(false);
     }
   };
@@ -1365,97 +1365,6 @@ function Dashboard() {
           </div>
         )}
       </div>
-
-      {/* Admin Login Modal - Only closes after successful login */}
-      {/* {showAdminLoginModal && ( */}
-      {/* <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"> */}
-      {/* Blurry Backdrop */}
-      {/* <div className="absolute inset-0 bg-black/70 backdrop-blur-lg" /> */}
-
-      {/* Modal Content */}
-      {/* <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"> */}
-      {/* <div className="p-8">
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className="bg-blue-100 p-4 rounded-2xl mb-4">
-              <DoorClosedLocked className="h-12 w-12 text-blue-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">Admin Verification</h2>
-            <p className="text-gray-600 mt-2 text-sm">
-              Please verify your admin credentials to access the dashboard
-            </p>
-          </div>
-
-          {adminLoginError && (
-            <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-xl text-sm">
-              {adminLoginError}
-            </div>
-          )}
-
-          <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={adminLoginEmail}
-                onChange={(e) => {
-                  setAdminLoginEmail(e.target.value);
-                  if (adminLoginError) setAdminLoginError("");
-                }}
-                placeholder="admin@yourcompany.com"
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                disabled={adminLoginLoading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                value={adminLoginPassword}
-                onChange={(e) => {
-                  setAdminLoginPassword(e.target.value);
-                  if (adminLoginError) setAdminLoginError("");
-                }}
-                placeholder="Enter your password"
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                disabled={adminLoginLoading}
-              />
-            </div>
-
-            <button
-              onClick={handleAdminLogin}
-              disabled={adminLoginLoading || !adminLoginEmail.trim() || !adminLoginPassword.trim()}
-              className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all flex items-center justify-center gap-3
-                    ${adminLoginLoading || !adminLoginEmail.trim() || !adminLoginPassword.trim()
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700 active:scale-[0.985]"
-                } text-white`}
-            >
-              {adminLoginLoading ? (
-                <>
-                  <div className="w-6 h-6 border-4 border-white border-t-transparent animate-spin rounded-full" />
-                  Verifying Admin Access...
-                </>
-              ) : (
-                "Verify & Continue"
-              )}
-            </button>
-          </div>
-        </div> */}
-
-      {/* Footer note */}
-      {/* <div className="bg-gray-50 border-t border-gray-100 px-8 py-5 text-center">
-          <p className="text-xs text-gray-500">
-            This dashboard is restricted to authorized administrators only.
-          </p>
-        </div> */}
-      {/* </div> */}
-      {/* </div> */}
-      {/* )} */}
 
       {/* Main return content dashboard */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
