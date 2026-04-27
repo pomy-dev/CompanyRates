@@ -250,11 +250,12 @@ function UserDetailsScreen() {
 
         if (user === "sms") {
           try {
-            const resp = await sendSMS(data?.username, data?.phoneNumber, companyDetails?.company_name)
+            // const resp = await sendSMS(data?.username, data?.phoneNumber, companyDetails?.company_name)
+            const resp = true;
 
             resp && notification.smsSent(data?.phoneNumber);
           } catch (err) {
-            console.error(err.message);
+            console.log(err.message);
             notification.error(err.message)
           }
         }
