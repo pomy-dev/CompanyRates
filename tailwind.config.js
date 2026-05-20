@@ -31,4 +31,14 @@ module.exports = {
     },
   },
   plugins: [],
+
+  corePlugins: {
+    textOpacity: false,
+    backgroundOpacity: false,
+    borderOpacity: false,
+  },
+
+  experimental: {
+    optimizeUniversalDefaults: true,
+  },
 };

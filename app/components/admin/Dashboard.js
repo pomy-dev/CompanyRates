@@ -6,7 +6,7 @@ import { getAllUsersByCompanyBranchId } from "../../../services/ratingService";
 import {
   Building2, LogOut, Star, MessageSquare, BarChart3, CheckSquare, Lightbulb, Target,
   MapPin, Plus, Search, ChevronDown, Menu, X, Users, DoorClosedLocked, Shield, KeyRound,
-  Trash2, Boxes,
+  Trash2, Boxes, Printer
 } from "lucide-react";
 import { useAuth } from "../../../app-context/auth-context";
 import {
@@ -18,6 +18,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { startOfWeek, endOfWeek, format, parseISO } from 'date-fns';
 import { PiSpinner } from "react-icons/pi";
 import { Pie, Bar } from "react-chartjs-2";
 import BranchModal from "./BranchModal";
@@ -26,6 +27,7 @@ import {
   getCompanyServicePointCriteria, insertNewBranch, fetchBranches,
   getRatingsByCriteriaIds, getRatings
 } from "../../../services/companyService";
+import ReportGenerator from "./ReportGenerator";
 
 ChartJS.register(
   ArcElement,
@@ -38,6 +40,12 @@ ChartJS.register(
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
+
+  const [periodType, setPeriodType] = useState("month");
+  const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7));
+  const [reportServicePoint, setReportServicePoint] = useState("all");
+  const [activeReport, setActiveReport] = useState("total");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [companyData, setCompanyData] = useState(null);
@@ -122,7 +130,7 @@ function Dashboard() {
     branch_id: "",
   });
 
-  const [editAccount, setEditAccount] = useState(null); // { id, email, name, role, branch_id }
+  const [editAccount, setEditAccount] = useState(null);
   const [editPassword, setEditPassword] = useState("");
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [myPassword, setMyPassword] = useState("");
@@ -131,6 +139,19 @@ function Dashboard() {
 
   const [companyStructureLoading, setCompanyStructureLoading] = useState(false);
   const [companyStructureError, setCompanyStructureError] = useState("");
+
+  const filterByPeriod = (items, periodType, value, dateField = 'created_at') => {
+    return items.filter(item => {
+      if (!item[dateField]) return false;
+      const itemDate = new Date(item[dateField]);
+
+      if (periodType === 'month') {
+        return format(itemDate, 'yyyy-MM') === value;
+      } else {
+        return getWeekKey(item[dateField]) === value;
+      }
+    });
+  };
 
   const fetchAdminAccounts = async () => {
     setAdminAccountsLoading(true);
@@ -293,6 +314,33 @@ function Dashboard() {
       setCompanyStructureLoading(false);
     }
   };
+
+  // Filtered Suggestions for Reports Tab
+  const filteredSuggestions = React.useMemo(() => {
+    let data = suggestions || [];
+
+    // Filter by service point
+    if (reportServicePoint !== "all") {
+      data = data.filter(s => {
+        const sp = getServicePointByRatingId(s.rating_id);
+        return sp === reportServicePoint;
+      });
+    }
+
+    // Filter by period (Month or Week)
+    return data.filter(s => {
+      if (!s.date) return false;
+      const date = new Date(s.date);
+
+      if (periodType === 'month') {
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return monthKey === selectedPeriod;
+      } else {
+        // Week filtering
+        return getWeekKey(s.date) === selectedPeriod;
+      }
+    });
+  }, [suggestions, reportServicePoint, periodType, selectedPeriod]);
 
   const resetCompanyStructure = async () => {
     setCompanyStructureError("");
@@ -861,11 +909,27 @@ function Dashboard() {
     return commentsData;
   };
 
-  const getFilteredSuggestion = (data, search) => {
+  const getFilteredSuggestion = (data, servicePoint, periodType, selectedPeriod, search) => {
     let suggestionData = data || [];
 
+    if (servicePoint !== "all") {
+      suggestionData = suggestionData.filter(s => getServicePointByRatingId(s.rating_id) === servicePoint);
+    }
+
+    // Filter by period
+    suggestionData = suggestionData.filter(s => {
+      if (!s.date) return false;
+      const date = new Date(s.date);
+      if (periodType === 'month') {
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return monthKey === selectedPeriod;
+      } else {
+        return getWeekKey(s.date) === selectedPeriod;
+      }
+    });
+
     if (search) {
-      suggestionData = suggestions.filter((item) =>
+      suggestionData = suggestionData.filter((item) =>
         JSON.stringify(item).toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -896,6 +960,7 @@ function Dashboard() {
 
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "reports", label: "Reports", icon: Printer },
     { id: "access", label: "Access", icon: Users },
     { id: "branches", label: "Branches", icon: Building2 },
     { id: "service-points", label: "Service Points", icon: Target },
@@ -958,6 +1023,25 @@ function Dashboard() {
     ],
   };
 
+  const filteredRatings = React.useMemo(() => {
+    let data = ratings || [];
+
+    // Filter by service point
+    if (reportServicePoint !== "all") {
+      data = data.filter(r => r.service_point === reportServicePoint);
+    }
+
+    // console.log("Filtered by service point:", data);
+
+    // Filter by period
+    return data.filter(r => {
+      if (!r.created_at) return false;
+      const date = new Date(r.created_at);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return monthKey === selectedPeriod;
+    });
+  }, [ratings, reportServicePoint, selectedPeriod]);
+
   // Mock data for service points
   const retrievedServicePoints =
     companyData?.CompanyServicePoints?.map((servicePoint) => {
@@ -1001,6 +1085,259 @@ function Dashboard() {
       },
     ],
   };
+
+  const getWeekKey = (dateStr) => {
+    const date = parseISO(dateStr);
+    const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Monday
+    return format(weekStart, 'yyyy-ww'); // e.g., "2026-20"
+  };
+
+  function TotalRatingsContent({ ratings }) {
+
+    return (
+      <div className="max-h-[400px]">
+        {/* Ratings Table */}
+        <table className="w-full text-sm border border-gray-200 rounded-lg">
+          <thead>
+            <tr className="bg-gray-100 text-gray-700">
+              <th className="px-4 py-3 text-left font-semibold">Date</th>
+              <th className="px-4 py-3 text-left font-semibold">User</th>
+              <th className="px-4 py-3 text-left font-semibold">Service Point</th>
+              <th className="px-4 py-3 text-left font-semibold">Criteria Breakdown</th>
+              <th className="px-4 py-3 text-center font-semibold">Avg Score</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {ratings.length > 0 ? (
+              ratings.map((rating, index) => {
+                const avgScore = rating.averageScore ||
+                  (rating.criteria?.reduce((sum, c) => sum + (c.score || 0), 0) / (rating.criteria?.length || 1)) || 0;
+
+                return (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                      {new Date(rating.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {rating.user?.full_name || rating.user?.name || "Anonymous"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {rating.service_point}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        {rating.criteria?.map((crit, i) => (
+                          <div
+                            key={i}
+                            className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs"
+                          >
+                            <span className="font-medium">{crit.name || crit.title}:</span>{" "}
+                            <span className="text-yellow-600 font-semibold">
+                              {crit.score}★
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center font-bold text-lg">
+                      {avgScore}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  No ratings found for the selected filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {
+          ratings.length > 50 && (
+            <p className="text-xs text-gray-500 mt-3 text-center">
+              Showing first 50 records • Total: {ratings.length}
+            </p>
+          )
+        }
+      </div>
+    );
+  }
+
+  // Low Ratings Table (≤ 3 stars)
+  function LowRatingsTable({ ratings }) {
+    // Better mapping: keep full context
+    const lowRatingItems = ratings.flatMap((rating) => {
+      if (!Array.isArray(rating.criteria)) return [];
+
+      return rating.criteria
+        .filter(c => Number(c.score) <= 3)
+        .map(crit => ({
+          ...crit,
+          userName: rating.user?.full_name || rating.user?.name || "Anonymous",
+          phone: rating.user?.phone_number || rating.phone || "—",
+          email: rating.user?.email || "—",
+          servicePoint: rating.service_point || "Unknown",
+          date: rating.created_at,
+          fullRating: rating
+        }));
+    });
+
+    return (
+      <div className="space-y-4 block print:table-row-group max-h-[400px]">
+        <table className="w-full text-sm border border-gray-200 rounded-lg">
+          <thead>
+            <tr className="bg-gray-100 text-gray-700">
+              <th className="px-4 py-3 text-left font-semibold">Date</th>
+              <th className="px-4 py-3 text-left font-semibold">User</th>
+              <th className="px-4 py-3 text-left font-semibold">Phone</th>
+              <th className="px-4 py-3 text-left font-semibold">Service Point</th>
+              <th className="px-4 py-3 text-left font-semibold">Criteria</th>
+              <th className="px-4 py-3 text-center font-semibold">Score</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {lowRatingItems.length > 0 ? (
+              lowRatingItems.slice(0, 100).map((item, i) => (   // increased limit
+                <tr key={i} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                    {item.date ? new Date(item.date).toLocaleDateString() : "—"}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {item.userName}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {item.phone}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {item.servicePoint}
+                  </td>
+                  <td className="px-4 py-3 font-medium">
+                    {item.name || item.title}
+                  </td>
+                  <td className="px-4 py-3 text-center font-bold text-red-600">
+                    {item.score}★
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
+                  No low ratings (3 stars or below) found for the selected filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {lowRatingItems.length > 100 && (
+          <p className="text-xs text-gray-500 mt-3 text-center">
+            Showing first 100 records • Total: {lowRatingItems.length}
+          </p>
+        )}
+      </div>
+      //   </ReportGenerator>
+      // </div>
+    );
+  }
+
+  // Higher Ratings Table (≥ 4 stars)
+  function HighRatingsTable({ ratings }) {
+    // Better mapping: keep full context
+    const highRatingItems = ratings.flatMap((rating) => {
+      if (!Array.isArray(rating.criteria)) return [];
+
+      return rating.criteria
+        .filter(c => Number(c.score) >= 4)
+        .map(crit => ({
+          ...crit,
+          userName: rating.user?.full_name || rating.user?.name || "Anonymous",
+          phone: rating.user?.phone_number || rating.phone || "—",
+          email: rating.user?.email || "—",
+          servicePoint: rating.service_point || "Unknown",
+          date: rating.created_at,
+          fullRating: rating
+        }));
+    });
+
+    return (
+      <div className="space-y-4 max-h-[400px]">
+        <table className="w-full text-sm border border-gray-200 rounded-lg">
+          <thead>
+            <tr className="bg-gray-100 text-gray-700">
+              <th className="px-4 py-3 text-left font-semibold">Date</th>
+              <th className="px-4 py-3 text-left font-semibold">User</th>
+              <th className="px-4 py-3 text-left font-semibold">Phone</th>
+              <th className="px-4 py-3 text-left font-semibold">Service Point</th>
+              <th className="px-4 py-3 text-left font-semibold">Criteria</th>
+              <th className="px-4 py-3 text-center font-semibold">Score</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {highRatingItems.length > 0 ? (
+              highRatingItems.slice(0, 100).map((item, i) => (   // increased limit
+                <tr key={i} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                    {item.date ? new Date(item.date).toLocaleDateString() : "—"}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {item.userName}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {item.phone}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {item.servicePoint}
+                  </td>
+                  <td className="px-4 py-3 font-medium">
+                    {item.name || item.title}
+                  </td>
+                  <td className="px-4 py-3 text-center font-bold text-red-600">
+                    {item.score}★
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
+                  No low ratings (3 stars or below) found for the selected filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {highRatingItems.length > 100 && (
+          <p className="text-xs text-gray-500 mt-3 text-center">
+            Showing first 100 records • Total: {highRatingItems.length}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  function SuggestionsReportTable({ suggestions }) {
+    return (
+      <div className="space-y-4 block print:table-row-group min-height-[400px]">
+        {suggestions.map((s, i) => (
+          <div key={i} className="border-l-4 border-blue-500 pl-4 py-2">
+            <div className="flex flex-wrap justify-between items-start gap-2">
+              <div>
+                <p className="font-medium">{s.user?.name || s?.username}</p>
+                <p className="text-sm text-gray-600">{s.suggestion}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {getServicePointByRatingId(s.rating_id)} • {new Date(s.date).toLocaleDateString()}
+                </p>
+              </div>
+              <div><p className="font-bold text-gray-900">{s?.phone_number || s?.phone}</p></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   const handleSwitchBranch = (branchId) => {
     setIsLoading(true);
@@ -1111,7 +1448,7 @@ function Dashboard() {
   return (
     <div className="w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="print:hidden bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4 gap-3">
             <div className="flex items-center">
@@ -1121,7 +1458,7 @@ function Dashboard() {
                     <img
                       src={companyData?.logoUrl}
                       alt="logo"
-                      className="h-8 w-8 object-cover rounded"
+                      className="h-8 w-8 object-stretch rounded"
                     />
                   </button>
                 ) : (
@@ -1370,7 +1707,7 @@ function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm mb-8">
           <div className="border-b border-gray-200">
             {/* Desktop tabs */}
-            <nav className="hidden lg:flex space-x-8 px-6" aria-label="Tabs">
+            <nav className="print:hidden hidden lg:flex space-x-8 px-6" aria-label="Tabs">
               {tabs.map((tab) => {
                 if (tab.id === "branches" && !isSuperAdmin) return null; // Only show Branches tab to super admins
                 const Icon = tab.icon;
@@ -1391,7 +1728,7 @@ function Dashboard() {
             </nav>
 
             {/* Mobile/tablet tabs + More dropdown */}
-            <nav className="lg:hidden px-4 sm:px-6" aria-label="Tabs">
+            <nav className="print:hidden lg:hidden px-4 sm:px-6" aria-label="Tabs">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3 overflow-x-auto py-2">
                   {primaryTabs.map((tab) => {
@@ -1694,6 +2031,151 @@ function Dashboard() {
               </div>
             )}
 
+            {/* Reports Tab */}
+            {activeTab === "reports" && (
+              <div className="space-y-10">
+                <div className="flex justify-between items-center print:hidden">
+                  <h2 className="text-lg font-semibold text-gray-900">📊 Reports Center</h2>
+                </div>
+
+                {/* Filters */}
+                <div className="print:hidden bg-white p-6 rounded-xl border border-gray-100 flex flex-wrap gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Period Type</label>
+                    <select
+                      value={periodType}
+                      onChange={(e) => setPeriodType(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                    >
+                      <option value="month">Month</option>
+                      <option value="week">Week</option>
+                    </select>
+                  </div>
+
+                  {periodType === 'month' ? (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Select Month</label>
+                      <input
+                        type="month"
+                        value={selectedPeriod}
+                        onChange={(e) => setSelectedPeriod(e.target.value)}
+                        className="border border-gray-300 rounded-lg px-4 py-2"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Select Week</label>
+                      <input
+                        type="week"
+                        value={selectedPeriod}
+                        onChange={(e) => setSelectedPeriod(e.target.value)}
+                        className="border border-gray-300 rounded-lg px-4 py-2"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Service Point</label>
+                    <select
+                      value={reportServicePoint}
+                      onChange={(e) => setReportServicePoint(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                    >
+                      <option value="all">All Service Points</option>
+                      {companyData?.CompanyServicePoints?.map((sp) => (
+                        <option key={sp.id} value={sp.servicepoint}>{sp.servicepoint}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600">Total Ratings</p>
+                    <p className="text-3xl font-bold">{filteredRatings.length}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600">Avg Rating</p>
+                    <p className="text-3xl font-bold">
+                      {filteredRatings.length > 0
+                        ? (filteredRatings.reduce((sum, r) => {
+                          const avg = r?.averageScore ||
+                            (Array.isArray(r?.criteria)
+                              ? r.criteria.reduce((s, c) => s + Number(c?.score || 0), 0) / r.criteria.length
+                              : 0);
+                          return sum + avg;
+                        }, 0) / filteredRatings.length).toFixed(1)
+                        : "0.0"
+                      }
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600">Service Points Covered</p>
+                    <p className="text-3xl font-bold">
+                      {new Set(filteredRatings.map(r => r.service_point).filter(Boolean)).size}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Sidebar Navigation */}
+                  <div className="lg:col-span-3">
+                    <div className="bg-white rounded-xl border border-gray-200 p-2 sticky top-6">
+                      <div className="font-medium text-gray-700 px-4 py-3 border-b">Report Types</div>
+
+                      {[
+                        { id: 'total', label: 'Total Ratings', icon: '📊' },
+                        { id: 'low', label: 'Lower Ratings (≤3)', icon: '🔴' },
+                        { id: 'high', label: 'Higher Ratings (4-5)', icon: '🟢' },
+                        { id: 'suggestions', label: 'Customer Suggestions', icon: '💡' },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => setActiveReport(item.id)}
+                          className={`w-full text-left px-4 py-3.5 rounded-lg flex items-center gap-3 transition-all ${activeReport === item.id
+                            ? 'bg-blue-50 text-blue-700 font-medium'
+                            : 'hover:bg-gray-50'
+                            }`}
+                        >
+                          <span className="text-xl">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Main Report Content Area */}
+                  <div className="lg:col-span-9">
+                    <div className="bg-white rounded-xl border border-gray-200 p-6">
+                      <div className="justify-between items-start mb-6">
+                        <div className="print:hidden">
+                          <ReportGenerator
+                            title={
+                              activeReport === 'total' ? "All Ratings Report" :
+                                activeReport === 'low' ? "Low Ratings Report" :
+                                  activeReport === 'high' ? "High Ratings Report" : "Suggestions Report"
+                            }
+                            filename={activeReport}
+                            activeReport={activeReport}
+                            filteredRatings={filteredRatings}
+                            filteredSuggestions={filteredSuggestions}
+                            selectedPeriod={selectedPeriod}
+                            subtitle={`Period: ${selectedPeriod} | Service Point: ${reportServicePoint === "all" ? "All" : reportServicePoint}`}
+                          >
+                            {/* Content will be rendered based on activeReport inside ReportGenerator */}
+                            {activeReport === 'total' && <TotalRatingsContent ratings={filteredRatings} />}
+                            {activeReport === 'low' && <LowRatingsTable ratings={filteredRatings} />}
+                            {activeReport === 'high' && <HighRatingsTable ratings={filteredRatings} />}
+                            {activeReport === 'suggestions' && <SuggestionsReportTable suggestions={filteredSuggestions} />}
+                          </ReportGenerator>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Access Tab */}
             {activeTab === "access" && (
@@ -2155,7 +2637,6 @@ function Dashboard() {
                 )}
               </div>
             )}
-
 
             {/* Branches Tab */}
             {(activeTab === "branches" && isSuperAdmin) && (
